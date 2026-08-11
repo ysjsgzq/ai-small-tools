@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="在浏览器本地批量压缩图片，支持体积对比与 ZIP 打包下载。">
+  <meta name="theme-color" content="#f2f5f3">
+  <title>图片批量压缩器 | AI 帮我做</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="app-header">
+    <div class="brand-lockup">
+      <span class="brand-mark" aria-hidden="true">AI</span>
+      <div>
+        <strong>AI 帮我做</strong>
+        <span>Day 01 / 图片批量压缩</span>
+      </div>
+    </div>
+    <div class="privacy-note">
+      <span class="status-dot" aria-hidden="true"></span>
+      图片只在本机处理
+    </div>
+  </header>
+
+  <main class="workspace">
+    <section class="main-stage" aria-labelledby="tool-title">
+      <div class="stage-heading">
+        <div>
+          <p class="section-label">BATCH IMAGE COMPRESSOR</p>
+          <h1 id="tool-title">把大图变轻一点</h1>
+          <p>拖入多张图片，压缩完成后查看体积变化并一次下载。</p>
+        </div>
+        <button id="clearButton" class="icon-button" type="button" aria-label="清空全部" title="清空全部" disabled>×</button>
+      </div>
+
+      <label id="dropZone" class="drop-zone" for="fileInput">
+        <input id="fileInput" type="file" accept="image/jpeg,image/png,image/webp" multiple hidden>
+        <span class="upload-symbol" aria-hidden="true">↑</span>
+        <strong>拖拽图片到这里</strong>
+        <span>或点击选择 JPG、PNG、WebP 文件</span>
+        <span class="choose-action">选择图片</span>
+      </label>
+
+      <p class="drop-footnote">最多 50 张，单张不超过 40 MB。处理过程不会上传文件。</p>
+
+      <section id="queueSection" class="queue-section is-hidden" aria-labelledby="queueTitle">
+        <div class="queue-header">
+          <div>
+            <h2 id="queueTitle">处理队列</h2>
+            <span id="fileCount">0 张图片</span>
+          </div>
+          <div class="queue-summary" aria-live="polite">
+            <span id="originalTotal">原始 0 B</span>
+            <span class="summary-arrow" aria-hidden="true">→</span>
+            <strong id="compressedTotal">等待压缩</strong>
+          </div>
+        </div>
+        <div id="fileList" class="file-list" aria-label="待处理图片"></div>
+      </section>
+    </section>
+
+    <aside class="settings-panel" aria-labelledby="settings-title">
+      <div class="panel-heading">
+        <div>
+          <p class="section-label">SETTINGS</p>
+          <h2 id="settings-title">压缩设置</h2>
+        </div>
+        <button id="resetSettings" class="text-button" type="button">恢复默认</button>
+      </div>
+
+      <div class="setting-group">
+        <div class="setting-label">
+          <label for="quality">图片质量</label>
+          <output id="qualityOutput" for="quality">82%</output>
+        </div>
+        <input id="quality" type="range" min="40" max="100" value="82">
+        <div class="range-labels"><span>更小体积</span><span>更高画质</span></div>
+      </div>
+
+      <div class="setting-group">
+        <label for="maxSize">最大边长</label>
+        <div class="select-wrap">
+          <select id="maxSize">
+            <option value="0">保持原尺寸</option>
+            <option value="2560" selected>2560 px</option>
+            <option value="1920">1920 px</option>
+            <option value="1280">1280 px</option>
+          </select>
+        </div>
+        <p>超出尺寸时等比缩小，不会拉伸图片。</p>
+      </div>
+
+      <div class="setting-group">
+        <span class="group-title">输出格式</span>
+        <div id="formatControl" class="segmented-control" role="group" aria-label="输出格式">
+          <button type="button" data-format="auto" class="selected" aria-pressed="true">自动</button>
+          <button type="button" data-format="jpeg" aria-pressed="false">JPEG</button>
+          <button type="button" data-format="webp" aria-pressed="false">WebP</button>
+        </div>
+      </div>
+
+      <label class="toggle-row" for="preserveTransparency">
+        <span>
+          <strong>保留透明背景</strong>
+          <small>PNG 自动转为带透明通道的 WebP</small>
+        </span>
+        <input id="preserveTransparency" type="checkbox" checked>
+        <span class="toggle" aria-hidden="true"></span>
+      </label>
+
+      <div class="panel-actions">
+        <button id="compressButton" class="primary-action" type="button" disabled>开始压缩</button>
+        <button id="downloadAllButton" class="secondary-action" type="button" disabled>
+          <span aria-hidden="true">↓</span>
+          <span class="button-label">打包下载</span>
+        </button>
+      </div>
+      <p class="panel-footnote">刷新页面后任务自动清空，请及时下载处理结果。</p>
+    </aside>
+  </main>
+
+  <footer class="app-footer">
+    <span>AI 帮我做 · Day 01</span>
+    <span>浏览器本地处理 / 无需登录 / v1.0.0</span>
+  </footer>
+
+  <div id="toastRegion" class="toast-region" role="status" aria-live="polite" aria-atomic="true"></div>
+
+  <script src="vendor/jszip.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
