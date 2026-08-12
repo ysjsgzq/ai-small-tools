@@ -7,6 +7,7 @@
 | 序号 | 工具 | 功能 | 目录 |
 | --- | --- | --- | --- |
 | Day 01 | 图片批量压缩器 | 本地批量压缩、体积对比、ZIP 下载 | [`tools/day-01-image-compressor/`](tools/day-01-image-compressor/) |
+| Day 02 | 批量文件重命名工具 | 命名规则预览、排序、ZIP 下载副本 | [`tools/day-02-batch-renamer/`](tools/day-02-batch-renamer/) |
 
 ## 仓库结构
 
@@ -15,7 +16,13 @@
 ├── README.md
 ├── LICENSE
 └── tools/
-    └── day-01-image-compressor/
+    ├── day-01-image-compressor/
+    │   ├── README.md
+    │   ├── index.html
+    │   ├── styles.css
+    │   ├── app.js
+    │   └── vendor/
+    └── day-02-batch-renamer/
         ├── README.md
         ├── index.html
         ├── styles.css
