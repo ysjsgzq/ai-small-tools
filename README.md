@@ -8,6 +8,7 @@
 | --- | --- | --- | --- |
 | Day 01 | 图片批量压缩器 | 本地批量压缩、体积对比、ZIP 下载 | [`tools/day-01-image-compressor/`](tools/day-01-image-compressor/) |
 | Day 02 | 批量文件重命名工具 | 命名规则预览、排序、ZIP 下载副本 | [`tools/day-02-batch-renamer/`](tools/day-02-batch-renamer/) |
+| Day 03 | Excel 重复数据清理工具 | 多规则查重、预览、清理副本下载 | [`tools/day-03-excel-deduplicator/`](tools/day-03-excel-deduplicator/) |
 
 ## 仓库结构
 
@@ -22,7 +23,13 @@
     │   ├── styles.css
     │   ├── app.js
     │   └── vendor/
-    └── day-02-batch-renamer/
+    ├── day-02-batch-renamer/
+    │   ├── README.md
+    │   ├── index.html
+    │   ├── styles.css
+    │   ├── app.js
+    │   └── vendor/
+    └── day-03-excel-deduplicator/
         ├── README.md
         ├── index.html
         ├── styles.css

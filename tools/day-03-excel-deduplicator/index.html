@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="在浏览器本地识别 Excel 重复记录，预览后下载清理副本。">
+  <meta name="theme-color" content="#f2f5f3">
+  <title>Excel 重复数据清理工具 | AI 帮我做</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="app-header">
+    <div class="brand-lockup">
+      <span class="brand-mark" aria-hidden="true">AI</span>
+      <div><strong>AI 帮我做</strong><span>Day 03 / Excel 重复数据清理</span></div>
+    </div>
+    <div class="privacy-note"><span class="status-dot" aria-hidden="true"></span>文件只在本机处理</div>
+  </header>
+
+  <main class="workspace">
+    <section class="main-stage" aria-labelledby="toolTitle">
+      <div class="stage-heading">
+        <div>
+          <p class="section-label">EXCEL DEDUPLICATOR</p>
+          <h1 id="toolTitle">先看清楚，再清理重复</h1>
+          <p>上传表格，选择判断字段，确认重复记录后下载清理副本。</p>
+        </div>
+        <button id="clearButton" class="icon-button" type="button" aria-label="清空文件" title="清空文件" disabled>×</button>
+      </div>
+
+      <label id="dropZone" class="drop-zone" for="fileInput">
+        <input id="fileInput" type="file" accept=".xlsx,.xls,.csv" hidden>
+        <span class="upload-symbol" aria-hidden="true">↑</span>
+        <strong>拖拽 Excel 到这里</strong>
+        <span>支持 .xlsx、.xls 和 .csv，单个文件不超过 20 MB</span>
+        <span class="choose-action">选择文件</span>
+      </label>
+      <p class="drop-footnote">原文件不会被修改，所有分析与导出均在当前浏览器完成。</p>
+
+      <section id="dataSection" class="data-section is-hidden" aria-labelledby="previewTitle">
+        <div class="summary-grid" aria-live="polite">
+          <article><span>原始记录</span><strong id="totalCount">0</strong></article>
+          <article class="warning"><span>重复记录</span><strong id="duplicateCount">0</strong></article>
+          <article class="success"><span>清理后</span><strong id="cleanCount">0</strong></article>
+          <article><span>当前工作表</span><strong id="sheetSummary">-</strong></article>
+        </div>
+
+        <div class="preview-header">
+          <div><h2 id="previewTitle">重复数据预览</h2><span id="previewHint">等待选择判断规则</span></div>
+          <div class="legend"><span><i class="legend-dot keep"></i>保留</span><span><i class="legend-dot remove"></i>将移除</span></div>
+        </div>
+
+        <div class="table-wrap">
+          <table id="previewTable">
+            <thead id="tableHead"></thead>
+            <tbody id="tableBody"></tbody>
+          </table>
+        </div>
+        <p id="tableFootnote" class="table-footnote"></p>
+      </section>
+    </section>
+
+    <aside class="settings-panel" aria-labelledby="settingsTitle">
+      <div class="panel-heading">
+        <div><p class="section-label">RULES</p><h2 id="settingsTitle">清理规则</h2></div>
+        <button id="resetSettings" class="text-button" type="button" disabled>恢复默认</button>
+      </div>
+
+      <div class="setting-group">
+        <label for="sheetSelect">工作表</label>
+        <select id="sheetSelect" disabled><option>请先上传文件</option></select>
+      </div>
+
+      <fieldset class="setting-group mode-group" disabled>
+        <legend>重复判断方式</legend>
+        <label class="radio-row"><input type="radio" name="matchMode" value="row" checked><span><strong>整行完全相同</strong><small>比较所有列的内容</small></span></label>
+        <label class="radio-row"><input type="radio" name="matchMode" value="columns"><span><strong>按指定列判断</strong><small>选择一列或多列作为判断依据</small></span></label>
+      </fieldset>
+
+      <div id="columnGroup" class="setting-group is-hidden">
+        <div class="setting-label"><span>判断字段</span><button id="toggleColumns" class="text-button" type="button">全选</button></div>
+        <div id="columnOptions" class="column-options"></div>
+        <p id="columnError" class="field-error"></p>
+      </div>
+
+      <fieldset class="setting-group keep-group" disabled>
+        <legend>重复项保留方式</legend>
+        <label class="radio-row compact"><input type="radio" name="keepMode" value="first" checked><span><strong>保留第一条</strong><small>移除后续重复项</small></span></label>
+        <label class="radio-row compact"><input type="radio" name="keepMode" value="last"><span><strong>保留最后一条</strong><small>移除之前重复项</small></span></label>
+        <label class="radio-row compact"><input type="radio" name="keepMode" value="none"><span><strong>全部移除</strong><small>重复组不保留任何记录</small></span></label>
+      </fieldset>
+
+      <label class="toggle-row" for="ignoreCase">
+        <span><strong>忽略英文大小写</strong><small>ABC 与 abc 视为相同</small></span>
+        <input id="ignoreCase" type="checkbox" checked disabled><span class="toggle" aria-hidden="true"></span>
+      </label>
+      <label class="toggle-row" for="trimWhitespace">
+        <span><strong>忽略首尾空格</strong><small>清理意外输入的空白</small></span>
+        <input id="trimWhitespace" type="checkbox" checked disabled><span class="toggle" aria-hidden="true"></span>
+      </label>
+
+      <div class="panel-actions">
+        <button id="downloadButton" class="primary-action" type="button" disabled><span aria-hidden="true">↓</span><span class="button-label">下载清理后的文件</span></button>
+      </div>
+      <p class="panel-footnote">导出的副本会保留原工作簿中的所有工作表，仅替换当前工作表的数据。</p>
+    </aside>
+  </main>
+
+  <footer class="app-footer"><span>AI 帮我做 · Day 03</span><span>浏览器本地处理 / 无需登录 / v1.0.0</span></footer>
+  <div id="toastRegion" class="toast-region" role="status" aria-live="polite" aria-atomic="true"></div>
+  <script src="vendor/xlsx.full.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
