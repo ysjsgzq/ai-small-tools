@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="本地运行的客户跟进助手：整理客户信息，计算跟进优先级，生成下一步建议。">
+  <title>客户跟进助手 · AI 帮我做 Day 04</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><span class="brand-mark">AI</span><span>帮我做</span><span class="day-tag">DAY 04</span></div>
+    <div class="privacy"><span class="status-dot"></span>仅在本地处理 · 数据不会上传</div>
+  </header>
+  <main class="shell">
+    <section class="intro">
+      <div>
+        <p class="eyebrow">SALES WORKBENCH / FOLLOW-UP</p>
+        <h1>今天，先联系谁？</h1>
+        <p class="lead">把散落的客户信息整理成一份可执行的跟进清单。工具用透明规则辅助排序，最终判断仍由你掌握。</p>
+      </div>
+      <div class="intro-actions"><button id="loadDemo" class="button button-quiet" type="button">载入示例</button><button id="clearAll" class="button button-quiet" type="button">清空数据</button></div>
+    </section>
+    <section class="metrics" aria-label="客户概览">
+      <div class="metric"><span class="metric-label">客户总数</span><strong id="totalCount">0</strong><span class="metric-note">当前列表</span></div>
+      <div class="metric"><span class="metric-label">今日优先</span><strong id="priorityCount">0</strong><span class="metric-note">建议先联系</span></div>
+      <div class="metric"><span class="metric-label">待重新激活</span><strong id="staleCount">0</strong><span class="metric-note">超过 7 天未联系</span></div>
+      <div class="metric"><span class="metric-label">高意向</span><strong id="hotCount">0</strong><span class="metric-note">意向 4 星以上</span></div>
+    </section>
+    <section class="workspace">
+      <aside class="queue-panel">
+        <div class="section-head"><div><p class="section-kicker">01 / QUEUE</p><h2>客户队列</h2></div><span id="saveState" class="save-state">本地自动保存</span></div>
+        <div class="queue-tools"><label class="search"><span aria-hidden="true">⌕</span><input id="searchInput" type="search" placeholder="搜索客户、公司或状态" autocomplete="off"></label><select id="sortSelect" aria-label="排序方式"><option value="priority">按优先级</option><option value="recent">最近联系</option><option value="intent">客户意向</option><option value="name">客户名称</option></select></div>
+        <div id="customerList" class="customer-list" aria-live="polite"></div>
+        <button id="addCustomer" class="add-row" type="button"><span>＋</span>新增客户</button>
+        <div class="import-row"><label class="button button-outline" for="csvInput">导入 CSV</label><input id="csvInput" type="file" accept=".csv,text/csv"><button id="exportCsv" class="button button-outline" type="button">导出 CSV</button></div>
+        <p class="micro-note">支持字段：客户、公司、需求、预算、状态、反馈、最近联系、意向。导出的文件不含任何联网信息。</p>
+      </aside>
+      <section class="detail-panel">
+        <div id="emptyDetail" class="empty-detail"><div class="empty-mark">/</div><h2>选择一位客户开始分析</h2><p>队列会按照跟进优先级排序。你也可以载入示例，快速了解工作方式。</p></div>
+        <div id="detailContent" class="detail-content is-hidden">
+          <div class="detail-head"><div><p class="section-kicker">02 / ANALYSIS</p><h2 id="detailName"></h2><p id="detailCompany" class="detail-company"></p></div><div id="detailPriority" class="priority-chip"></div></div>
+          <div class="analysis-grid"><article class="analysis-card"><span>客户状态</span><strong id="detailStatus"></strong><small id="detailStatusHint"></small></article><article class="analysis-card"><span>客户意向</span><strong id="detailIntent"></strong><small id="detailIntentHint"></small></article><article class="analysis-card"><span>跟进节奏</span><strong id="detailCadence"></strong><small id="detailCadenceHint"></small></article></div>
+          <div class="recommendation"><div class="recommendation-label">NEXT BEST ACTION <span id="ruleScore"></span></div><h3 id="detailAdvice"></h3><p id="detailReason"></p></div>
+          <div class="talk-track"><div class="talk-head"><div><p class="section-kicker">03 / TALK TRACK</p><h3>下一次怎么说</h3></div><button id="copyScript" class="button button-quiet" type="button">复制话术</button></div><textarea id="detailScript" rows="5" aria-label="跟进话术"></textarea><p class="micro-note">话术是基于当前记录生成的草稿，请结合真实语境和客户关系修改后再发送。</p></div>
+          <div class="edit-form"><div class="section-head"><div><p class="section-kicker">04 / RECORD</p><h3>客户记录</h3></div><button id="deleteCustomer" class="text-danger" type="button">删除客户</button></div><div class="form-grid"><label>客户<input id="fieldName" data-field="name"></label><label>公司<input id="fieldCompany" data-field="company"></label><label class="wide">需求<textarea id="fieldNeed" data-field="need" rows="2"></textarea></label><label>预算<input id="fieldBudget" data-field="budget"></label><label>当前状态<select id="fieldStatus" data-field="status"><option>待联系</option><option>需求确认</option><option>已报价</option><option>谈判中</option><option>已成交</option><option>无回复</option><option>已流失</option></select></label><label>最近联系<input id="fieldLastContact" data-field="lastContact" type="number" min="0" max="3650"><small>多少天前</small></label><label>客户意向<select id="fieldIntent" data-field="intent"><option value="1">★☆☆☆☆</option><option value="2">★★☆☆☆</option><option value="3">★★★☆☆</option><option value="4">★★★★☆</option><option value="5">★★★★★</option></select></label><label class="wide">客户反馈<textarea id="fieldFeedback" data-field="feedback" rows="3"></textarea></label></div><button id="saveCustomer" class="button button-primary" type="button">保存客户记录</button></div>
+        </div>
+      </section>
+    </section>
+    <footer class="footer"><span>AI 帮我做 · Day 04</span><span>规则辅助分析，不替代销售判断</span></footer>
+  </main>
+  <div id="toast" class="toast" role="status"></div>
+  <script src="app.js"></script>
+</body>
+</html>

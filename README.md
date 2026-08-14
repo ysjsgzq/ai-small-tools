@@ -9,6 +9,7 @@
 | Day 01 | 图片批量压缩器 | 本地批量压缩、体积对比、ZIP 下载 | [`tools/day-01-image-compressor/`](tools/day-01-image-compressor/) |
 | Day 02 | 批量文件重命名工具 | 命名规则预览、排序、ZIP 下载副本 | [`tools/day-02-batch-renamer/`](tools/day-02-batch-renamer/) |
 | Day 03 | Excel 重复数据清理工具 | 多规则查重、预览、清理副本下载 | [`tools/day-03-excel-deduplicator/`](tools/day-03-excel-deduplicator/) |
+| Day 04 | 客户跟进助手 | 客户排序、跟进建议、话术草稿、CSV 导入导出 | [`tools/day-04-client-follow-up/`](tools/day-04-client-follow-up/) |
 
 ## 仓库结构
 
@@ -29,12 +30,17 @@
     │   ├── styles.css
     │   ├── app.js
     │   └── vendor/
-    └── day-03-excel-deduplicator/
+    ├── day-03-excel-deduplicator/
         ├── README.md
         ├── index.html
         ├── styles.css
         ├── app.js
         └── vendor/
+    └── day-04-client-follow-up/
+        ├── README.md
+        ├── index.html
+        ├── styles.css
+        └── app.js
 ```
 
 后续工具统一添加到 `tools/` 下，每个工具使用独立文件夹，目录名采用 `day-序号-英文名称` 格式。
