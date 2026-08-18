@@ -10,6 +10,7 @@
 | Day 02 | 批量文件重命名工具 | 命名规则预览、排序、ZIP 下载副本 | [`tools/day-02-batch-renamer/`](tools/day-02-batch-renamer/) |
 | Day 03 | Excel 重复数据清理工具 | 多规则查重、预览、清理副本下载 | [`tools/day-03-excel-deduplicator/`](tools/day-03-excel-deduplicator/) |
 | Day 04 | 客户跟进助手 | 客户排序、跟进建议、话术草稿、CSV 导入导出 | [`tools/day-04-client-follow-up/`](tools/day-04-client-follow-up/) |
+| Day 08 | 文档格式体检器（Agent Skill） | 格式要求拆解、字体/字号/行距/页面核对、三状态报告 | [`tools/day-08-doc-format-checker/`](tools/day-08-doc-format-checker/) |
 
 ## 仓库结构
 
@@ -31,16 +32,21 @@
     │   ├── app.js
     │   └── vendor/
     ├── day-03-excel-deduplicator/
+    │   ├── README.md
+    │   ├── index.html
+    │   ├── styles.css
+    │   ├── app.js
+    │   └── vendor/
+    ├── day-04-client-follow-up/
+    │   ├── README.md
+    │   ├── index.html
+    │   ├── styles.css
+    │   └── app.js
+    └── day-08-doc-format-checker/
+        ├── SKILL.md
         ├── README.md
-        ├── index.html
-        ├── styles.css
-        ├── app.js
-        └── vendor/
-    └── day-04-client-follow-up/
-        ├── README.md
-        ├── index.html
-        ├── styles.css
-        └── app.js
+        ├── scripts/
+        └── assets/
 ```
 
 后续工具统一添加到 `tools/` 下，每个工具使用独立文件夹，目录名采用 `day-序号-英文名称` 格式。

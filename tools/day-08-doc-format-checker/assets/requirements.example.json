@@ -1,0 +1,9 @@
+{
+  "requirements": [
+    { "object": "正文", "attr": "east_asia_font", "expected": "仿宋_GB2312", "source": "招标文件 第三章 第2条" },
+    { "object": "正文", "attr": "font_size_pt", "expected": "14", "source": "招标文件 第三章 第2条" },
+    { "object": "正文", "attr": "line_spacing", "expected": "exact:28", "source": "招标文件 第三章 第2条" },
+    { "object": "页面", "attr": "paper_size", "expected": "A4", "source": "招标文件 第五章 装订要求" },
+    { "object": "签章页", "attr": "manual_sign", "expected": "要求原件签字并加盖公章，复印件无效", "source": "招标文件 第八章", "checkable": false }
+  ]
+}
