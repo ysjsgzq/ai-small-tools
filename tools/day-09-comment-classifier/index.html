@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>评论归类器 · AI帮我做 Day 09</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; background: #f6f7f6; color: #222; padding: 32px 16px; }
+  .wrap { max-width: 720px; margin: 0 auto; }
+  h1 { font-size: 24px; margin-bottom: 6px; }
+  .sub { color: #667; font-size: 14px; margin-bottom: 22px; }
+  .card { background: #fff; border-radius: 10px; padding: 18px; margin-bottom: 16px; box-shadow: 0 1px 4px rgba(0,0,0,.06); }
+  .card h2 { font-size: 16px; margin-bottom: 10px; }
+  textarea { width: 100%; height: 160px; border: 1px solid #d8dcd8; border-radius: 8px; padding: 10px; font-size: 14px; resize: vertical; }
+  .row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-top: 10px; }
+  button { background: #3aa56d; color: #fff; border: none; border-radius: 8px; padding: 10px 22px; font-size: 15px; cursor: pointer; }
+  button:disabled { background: #a9c9b6; cursor: wait; }
+  input[type=file] { font-size: 14px; }
+  .hint { color: #889; font-size: 12px; margin-top: 8px; line-height: 1.7; }
+  #status { margin-top: 10px; font-size: 14px; color: #556; }
+  .cat { margin: 14px 0; }
+  .cat h3 { font-size: 15px; margin-bottom: 6px; }
+  .cat ul { list-style: none; }
+  .cat li { font-size: 14px; padding: 5px 10px; background: #f2f6f2; border-radius: 6px; margin-bottom: 4px; }
+  .warn { color: #c26; font-weight: 600; }
+  table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 14px; }
+  td, th { border: 1px solid #e0e4e0; padding: 6px 10px; text-align: left; }
+  th { background: #eef4ef; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>评论归类器</h1>
+  <div class="sub">粘贴评论或拖入评论区截图，本地归类成一张表。AI帮我做 · Day 09</div>
+
+  <div class="card">
+    <h2>方式一：粘贴文本（一行一条）</h2>
+    <textarea id="comments" placeholder="等了四十分钟才上菜，服了。&#10;汤里有头发。&#10;希望可以有半份。"></textarea>
+  </div>
+
+  <div class="card">
+    <h2>方式二：评论区截图（png / jpg）</h2>
+    <div class="row">
+      <input type="file" id="shot" accept="image/png,image/jpeg">
+    </div>
+    <div class="hint">截图在浏览器本地识字（首次需联网加载识别引擎，之后有缓存），自动滤掉用户名、时间等杂讯行。图片不会上传到任何服务器。Windows / macOS / Linux / 手机浏览器通用。</div>
+  </div>
+
+  <div class="card">
+    <div class="row">
+      <button id="run">开始归类</button>
+      <span id="status"></span>
+    </div>
+  </div>
+
+  <div class="card" id="report" style="display:none"></div>
+
+  <div class="hint">本工具只整理、不回复：怎么回复评论，永远由人决定。不碰平台账号，全部本地处理。</div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<script>
+const CATEGORIES = {
+  '出餐速度': ['慢', '等了', '上菜', '排队', '出餐', '等位'],
+  '口味': ['咸', '淡', '难吃', '味道', '太甜', '太辣', '腻', '腥'],
+  '卫生': ['头发', '异物', '脏', '油腻', '蟑螂', '不干净', '苍蝇', '餐具没'],
+  '服务': ['态度', '不理', '翻白眼', '怼', '没人理'],
+  '包装': ['打包', '包装', '漏了', '洒了', '盒子破', '袋子太薄'],
+  '价格': ['贵', '涨价', '涨', '性价比', '不值']
+};
+const SUGGEST_WORDS = ['希望', '建议', '能不能', '可不可以', '下次', '加个', '不如', '为什么没有', '希望能'];
+const EMOTION_WORDS = ['服了', '无语', '气死', '绝了', '醉了', '呵呵', '失望', '后悔', '恶心', '再也不来'];
+const PRAISE_WORDS = ['好吃', '值', '赞', '喜欢', '满意', '热情', '棒', '推荐', '真好', '很好', '不错', '干净', '没得说', '刚好'];
+const TRANSITIONS = ['但是', '不过', '可是', '然而', '只不过', '就是', '但'];
+const NOISE_PATTERNS = [/^全部评价/, /^评价\s*[（(]/, /^好评/, /^差评/, /^最新/];
+const TIME_RE = /(\d+分钟前|\d+小时前|\d+天前|昨天|前天|\d+月\d+日)/;
+
+const hit = (t, ws) => ws.some(w => t.includes(w));
+const firstCategory = t => { for (const [c, ws] of Object.entries(CATEGORIES)) if (hit(t, ws)) return c; return null; };
+
+function classify(text) {
+  const isPraise = hit(text, PRAISE_WORDS);
+  const isSugg = hit(text, SUGGEST_WORDS);
+  const isEmo = hit(text, EMOTION_WORDS);
+  for (const t of TRANSITIONS) {
+    if (text.includes(t)) {
+      const i = text.indexOf(t);
+      const head = text.slice(0, i), tail = text.slice(i + t.length);
+      const cat = firstCategory(tail);
+      if (cat && hit(head, PRAISE_WORDS)) return ['问题', cat];
+    }
+  }
+  const cat = firstCategory(text);
+  if (cat) return isPraise ? ['好评', '含夸奖词，未计入问题'] : ['问题', cat];
+  if (isSugg) return ['建议', '建议'];
+  if (isEmo) return ['情绪', '不满，无具体事实'];
+  if (isPraise) return ['好评', '好评'];
+  return ['其他', '归不进任何一类'];
+}
+
+// Tesseract 中文结果常带字间空格（服 务 员），先压缩掉：中文字符/全角标点周围的空白全部去掉
+function squeeze(s) {
+  for (let i = 0; i < 3; i++) s = s.replace(/ ?([\u4e00-\u9fff\u3000-\u303f\uff00-\uffef]) ?/g, '$1');
+  return s;
+}
+const cjkCount = s => (s.match(/[\u4e00-\u9fff]/g) || []).length;
+
+function filterNoise(rawLines) {
+  const comments = [];
+  let noise = 0;
+  const lines = rawLines.map(squeeze);
+  for (const l0 of lines) {
+    const l = l0.trim();
+    if (!l) continue;
+    // 标题/栏位行
+    if (NOISE_PATTERNS.some(p => p.test(l))) { noise++; continue; }
+    // 太短的行（含掩码用户名：xx / x* / **）
+    if (l.replace(/x/gi, '').replace(/[\*＊]/g, '').length < 4) { noise++; continue; }
+    // 用户名+时间行：带时间词，或 汉字太少且夹着字母数字（如「王kx，人时前」，OCR 常读错数字）
+    const hasTime = TIME_RE.test(l);
+    const usernameLike = cjkCount(l) <= 4 && /[a-zA-Z0-9]/.test(l);
+    if (hasTime || usernameLike) { noise++; continue; }
+    comments.push(l);
+  }
+  return [comments, noise];
+}
+
+function renderReport(lines) {
+  const problems = {}; Object.keys(CATEGORIES).forEach(c => problems[c] = []);
+  const suggests = [], emotions = [], praises = [], others = [];
+  for (const text of lines) {
+    const [where, what] = classify(text);
+    if (where === '问题') problems[what].push(text);
+    else if (where === '建议') suggests.push(text);
+    else if (where === '情绪') emotions.push(text);
+    else if (where === '好评') praises.push(text);
+    else others.push(text);
+  }
+  const total = lines.length;
+  const issueCnt = Object.values(problems).reduce((s, a) => s + a.length, 0);
+  let h = '';
+  h += '<h2>归类报告（' + total + ' 条）</h2><table><tr><th>类别</th><th>条数</th><th>原话</th></tr>';
+  for (const [c, arr] of Object.entries(problems)) {
+    if (arr.length) h += '<tr><td>' + c + '</td><td>' + arr.length + '</td><td>' + arr.map(q => escapeHtml(q)).join('／') + '</td></tr>';
+  }
+  h += '</table>';
+  const sec = (title, arr, note) => {
+    if (!arr.length) return '';
+    return '<div class="cat"><h3>' + title + '（' + arr.length + ' 条' + (note ? '，' + note : '') + '）</h3><ul>' +
+      arr.slice(0, 8).map(q => '<li>' + escapeHtml(q) + '</li>').join('') +
+      (arr.length > 8 ? '<li>…等 ' + arr.length + ' 条</li>' : '') + '</ul></div>';
+  };
+  h += sec('建议', suggests, '最值钱');
+  h += sec('情绪（不计入问题）', emotions, '没有具体事实');
+  h += sec('好评（未计入问题）', praises);
+  h += sec('其他', others, '不是垃圾桶，是待办');
+  const ratio = total ? others.length / total : 0;
+  h += '<p>小结：' + total + ' 条中，问题 ' + issueCnt + '、建议 ' + suggests.length + '、情绪 ' + emotions.length +
+       '、好评 ' + praises.length + '、其他 ' + others.length + '（占比 ' + Math.round(ratio * 100) + '%）。</p>';
+  if (ratio > 1 / 3) h += '<p class="warn">「其他」超过三分之一：该修的是分类规则，不是继续塞。</p>';
+  h += '<p class="hint">只报告，不代改；怎么处理，由人决定。</p>';
+  document.getElementById('report').innerHTML = h;
+  document.getElementById('report').style.display = 'block';
+}
+
+function escapeHtml(s) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+
+document.getElementById('run').addEventListener('click', async () => {
+  const status = document.getElementById('status');
+  const btn = document.getElementById('run');
+  const file = document.getElementById('shot').files[0];
+  try {
+    if (file) {
+      btn.disabled = true;
+      status.textContent = '正在本地识字（首次需加载引擎，约几十秒）…';
+      const res = await Tesseract.recognize(file, 'chi_sim+eng', { logger: m => { if (m.status === 'recognizing text') status.textContent = '识别中 ' + Math.round(m.progress * 100) + '%'; } });
+      const lines = res.data.text.split('\n');
+      const [comments, noise] = filterNoise(lines);
+      status.textContent = '识字 ' + (comments.length + noise) + ' 行，滤掉杂讯 ' + noise + ' 行，进入归类 ' + comments.length + ' 条';
+      renderReport(comments);
+    } else {
+      const text = document.getElementById('comments').value;
+      const lines = text.split('\n').map(s => s.trim()).filter(Boolean);
+      if (!lines.length) { status.textContent = '请先粘贴评论或选择截图'; return; }
+      status.textContent = '';
+      renderReport(lines);
+    }
+  } catch (e) {
+    status.textContent = '出错：' + e.message;
+  } finally {
+    btn.disabled = false;
+  }
+});
+</script>
+</body>
+</html>

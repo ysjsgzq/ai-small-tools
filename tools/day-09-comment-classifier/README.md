@@ -4,9 +4,22 @@
 
 ## 用法
 
+## 推荐入口：网页版（全平台）
+
+浏览器打开 `index.html`（本地起个静态服务更稳）：
+
 ```bash
-python3 comment_classifier.py 评论.txt        # 文本：一行一条
-python3 comment_classifier.py 评论区截图.png   # 截图：自动识字 + 滤杂讯 + 归类
+python3 -m http.server 4173
+# 访问 http://127.0.0.1:4173/tools/day-09-comment-classifier/
+```
+
+粘贴文本或直接拖入评论区截图均可。识字在浏览器本地完成（Tesseract.js，首次联网加载引擎后走缓存），图片不上传任何服务器。Windows / macOS / Linux / 手机浏览器通用。实测一张 10 条评论的截图：识字 21 行、滤杂讯 11 行、10 条全部归类正确（含 OCR 字间空格压缩与结构化杂讯过滤，详见源码）。
+
+## 命令行版
+
+```bash
+python3 comment_classifier.py 评论.txt        # 文本：一行一条（全平台）
+python3 comment_classifier.py 评论区截图.png   # 截图（走 macOS 系统 Vision；其他系统请用网页版）
 ```
 
 评论从哪来（不自动抓取、不碰账号，人自己动手，安全）：
