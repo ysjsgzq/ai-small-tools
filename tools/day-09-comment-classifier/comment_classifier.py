@@ -14,27 +14,45 @@ CATEGORIES = {
     '卫生': ['头发', '异物', '脏', '油腻', '蟑螂', '不干净', '苍蝇', '餐具没'],
     '服务': ['态度', '不理', '翻白眼', '怼', '没人理'],
     '包装': ['打包', '包装', '漏了', '洒了', '盒子破', '袋子太薄'],
-    '价格': ['贵', '涨价', '性价比', '不值'],
+    '价格': ['贵', '涨价', '涨', '性价比', '不值'],
 }
 SUGGEST_WORDS = ['希望', '建议', '能不能', '可不可以', '下次', '加个', '不如', '为什么没有', '希望能']
 EMOTION_WORDS = ['服了', '无语', '气死', '绝了', '醉了', '呵呵', '失望', '后悔', '恶心', '再也不来']
-PRAISE_WORDS = ['好吃', '值', '赞', '喜欢', '满意', '热情', '棒', '推荐', '真好', '不错', '干净', '没得说']
+PRAISE_WORDS = ['好吃', '值', '赞', '喜欢', '满意', '热情', '棒', '推荐', '真好', '很好', '不错', '干净', '没得说', '刚好']
+TRANSITIONS = ['但是', '不过', '可是', '然而', '只不过', '就是', '但']
 
 
 def hit(text, words):
     return any(w in text for w in words)
 
 
+def first_category(text):
+    for cat, words in CATEGORIES.items():
+        if hit(text, words):
+            return cat
+    return None
+
+
 def classify(text):
-    """返回 (去向, 类别或说明)"""
+    """返回 (去向, 类别或说明)
+    两条保护：
+    1. 先夸后转折（"…没得说，就是有点咸"）：按转折后面的部分归类，夸奖不吞问题；
+    2. 整条只有夸奖、没有转折的（"不咸不淡，刚好"）：算好评，不算问题。
+    """
     is_praise = hit(text, PRAISE_WORDS)
     is_sugg = hit(text, SUGGEST_WORDS)
     is_emo = hit(text, EMOTION_WORDS)
-    for cat, words in CATEGORIES.items():
-        if hit(text, words):
-            if is_praise:
-                return ('好评', '含夸奖词，未计入问题')
-            return ('问题', cat)
+    for t in TRANSITIONS:
+        if t in text:
+            head, tail = text.split(t, 1)
+            cat = first_category(tail)
+            if cat and hit(head, PRAISE_WORDS):
+                return ('问题', cat)
+    cat = first_category(text)
+    if cat:
+        if is_praise:
+            return ('好评', '含夸奖词，未计入问题')
+        return ('问题', cat)
     if is_sugg:
         return ('建议', '建议')
     if is_emo:
