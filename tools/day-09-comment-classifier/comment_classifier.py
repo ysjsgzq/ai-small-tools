@@ -1,12 +1,37 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""评论归类器 · 第一版
-输入：评论文本文件，一行一条
-处理：明显好评先排除 → 建议 / 问题归类 / 情绪 / 其他
+"""评论归类器
+输入：评论文本（一行一条），或评论区截图（.png/.jpg，走系统 OCR）
+处理：截图先识字并滤掉用户名/时间等杂讯 → 夸奖保护 → 问题归类 / 建议 / 情绪 / 其他
 输出：问题分类表（带原话）+ 建议区 + 情绪区 + 其他占比检查
-规则：关键词匹配。关键词只会找字，不会读句子。
+规则：关键词匹配。关键词只会找字，不会读句子；OCR 错字会原样进入归类。
 """
+import os
+import re
+import subprocess
 import sys
+
+NOISE_PATTERNS = [
+    r'^全部评价', r'^评价\s*[（(]', r'^好评', r'^差评', r'^最新',
+]
+TIME_WORDS = r'(\d+分钟前|\d+小时前|\d+天前|昨天|前天|\d+月\d+日)'
+
+
+def ocr_screenshot(path):
+    """调 macOS 自带 Vision 识字，返回评论行（滤掉用户名/时间等杂讯行）。"""
+    swift = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'ocr.swift')
+    out = subprocess.run(['swift', swift, path], capture_output=True, text=True)
+    lines = [l.strip() for l in out.stdout.splitlines() if l.strip()]
+    comments, noise = [], 0
+    for l in lines:
+        if len(l) < 4 or any(re.match(p, l) for p in NOISE_PATTERNS):
+            noise += 1
+            continue
+        if ('**' in l or '•' in l or '·' in l) and re.search(TIME_WORDS, l):
+            noise += 1
+            continue
+        comments.append(l)
+    return comments, noise
 
 CATEGORIES = {
     '出餐速度': ['慢', '等了', '上菜', '排队', '出餐', '等位'],
@@ -63,7 +88,13 @@ def classify(text):
 
 
 def main(path):
-    lines = [l.strip() for l in open(path, encoding='utf-8') if l.strip()]
+    if path.lower().endswith(('.png', '.jpg', '.jpeg')):
+        lines, noise = ocr_screenshot(path)
+        print(f'截图识别：{path}')
+        print(f'识字 {len(lines) + noise} 行，滤掉用户名/时间等杂讯 {noise} 行，进入归类 {len(lines)} 条')
+        print()
+    else:
+        lines = [l.strip() for l in open(path, encoding='utf-8') if l.strip()]
     problems = {c: [] for c in CATEGORIES}
     suggests, emotions, praises, others = [], [], [], []
     for i, text in enumerate(lines, 1):
