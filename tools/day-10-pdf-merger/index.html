@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PDF 合并器 · AI帮我做 Day 10</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; background: #f6f7f6; color: #222; padding: 32px 16px; }
+  .wrap { max-width: 680px; margin: 0 auto; }
+  h1 { font-size: 24px; margin-bottom: 6px; }
+  .sub { color: #667; font-size: 14px; margin-bottom: 22px; }
+  .card { background: #fff; border-radius: 10px; padding: 18px; margin-bottom: 16px; box-shadow: 0 1px 4px rgba(0,0,0,.06); }
+  .card h2 { font-size: 16px; margin-bottom: 10px; }
+  .row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+  button { background: #3aa56d; color: #fff; border: none; border-radius: 8px; padding: 9px 20px; font-size: 15px; cursor: pointer; }
+  button.small { background: #eef4ef; color: #3aa56d; padding: 4px 12px; font-size: 13px; }
+  button.danger { background: #f7ecec; color: #c05656; padding: 4px 12px; font-size: 13px; }
+  button:disabled { background: #a9c9b6; cursor: wait; }
+  input[type=file] { font-size: 14px; }
+  .hint { color: #889; font-size: 12px; margin-top: 8px; line-height: 1.7; }
+  #status { margin-top: 10px; font-size: 14px; color: #556; }
+  ul#list { list-style: none; margin-top: 12px; }
+  ul#list li { display: flex; align-items: center; gap: 10px; padding: 8px 10px; background: #f2f6f2; border-radius: 8px; margin-bottom: 6px; font-size: 14px; }
+  ul#list li .name { flex: 1; word-break: break-all; }
+  ul#list li .pages { color: #567; white-space: nowrap; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>PDF 合并器</h1>
+  <div class="sub">把多个 PDF 按顺序合成一个文件。AI帮我做 · Day 10</div>
+
+  <div class="card">
+    <h2>选择 PDF 文件（可多选）</h2>
+    <div class="row">
+      <input type="file" id="files" accept="application/pdf" multiple>
+      <button class="small" id="sortName">按文件名排序</button>
+    </div>
+    <ul id="list"></ul>
+    <div class="hint">文件只在浏览器本地读取和合并，不上传任何服务器。Windows / macOS / Linux / 手机浏览器通用。</div>
+  </div>
+
+  <div class="card">
+    <div class="row">
+      <button id="merge">合并并下载</button>
+      <span id="status"></span>
+    </div>
+  </div>
+
+  <div class="hint" id="engineWatch">只合并不改内容；加密 PDF 会提示跳过；扫描件合并后体积约为各文件之和。</div>
+  <script>
+    setTimeout(() => {
+      if (!window.__pdfLibReady) {
+        document.getElementById('engineWatch').innerHTML = '<span style="color:#c05656">合并引擎（pdf-lib）加载失败：请检查网络后刷新页面。首次使用需联网加载一次，之后走缓存。</span>';
+        document.getElementById('merge').disabled = true;
+      }
+    }, 4000);
+  </script>
+</div>
+
+<script type="module">
+import { PDFDocument } from 'https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/+esm';
+window.__pdfLibReady = true;
+let items = []; // { file, pages }
+
+const listEl = document.getElementById('list');
+const statusEl = document.getElementById('status');
+
+function render() {
+  listEl.innerHTML = '';
+  items.forEach((it, i) => {
+    const li = document.createElement('li');
+    li.innerHTML = '<span>' + (i + 1) + '.</span>' +
+      '<span class="name">' + escapeHtml(it.file.name) + '</span>' +
+      '<span class="pages">' + it.pages + ' 页</span>';
+    const up = mkBtn('↑', () => move(i, -1), i === 0);
+    const down = mkBtn('↓', () => move(i, 1), i === items.length - 1);
+    const del = mkDel(i);
+    li.append(up, down, del);
+    listEl.appendChild(li);
+  });
+}
+function mkBtn(t, fn, dis) { const b = document.createElement('button'); b.className = 'small'; b.textContent = t; b.onclick = fn; b.disabled = dis; return b; }
+function mkDel(i) { const b = document.createElement('button'); b.className = 'danger'; b.textContent = '移除'; b.onclick = () => { items.splice(i, 1); render(); }; return b; }
+function move(i, d) { const t = items[i]; items[i] = items[i + d]; items[i + d] = t; render(); }
+function escapeHtml(s) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+
+document.getElementById('files').addEventListener('change', async e => {
+  statusEl.textContent = '正在读取页数…';
+  for (const f of e.target.files) {
+    try {
+      const doc = await PDFDocument.load(await f.arrayBuffer(), { ignoreEncryption: false });
+      items.push({ file: f, pages: doc.getPageCount() });
+    } catch (err) {
+      statusEl.textContent = '「' + f.name + '」读取失败（加密或不兼容），已跳过';
+    }
+  }
+  render();
+  statusEl.textContent = items.length ? '共 ' + items.length + ' 个文件、' + items.reduce((s, i) => s + i.pages, 0) + ' 页' : '';
+});
+
+document.getElementById('sortName').addEventListener('click', () => {
+  items.sort((a, b) => a.file.name.localeCompare(b.file.name, 'zh-CN', { numeric: true }));
+  render();
+});
+
+document.getElementById('merge').addEventListener('click', async () => {
+  if (items.length < 2) { statusEl.textContent = '至少选择两个文件'; return; }
+  const btn = document.getElementById('merge');
+  btn.disabled = true;
+  try {
+    const out = await PDFDocument.create();
+    for (const it of items) {
+      const src = await PDFDocument.load(await it.file.arrayBuffer());
+      const pages = await out.copyPages(src, src.getPageIndices());
+      pages.forEach(p => out.addPage(p));
+    }
+    const bytes = await out.save();
+    const blob = new Blob([bytes], { type: 'application/pdf' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'merged-' + new Date().toISOString().slice(0, 10) + '.pdf';
+    a.click();
+    URL.revokeObjectURL(a.href);
+    statusEl.textContent = '完成：' + items.length + ' 个文件合并为 ' + out.getPageCount() + ' 页，已开始下载';
+    window.__lastMergedBytes = bytes; // 供本地自检
+  } catch (err) {
+    statusEl.textContent = '合并出错：' + err.message;
+  } finally {
+    btn.disabled = false;
+  }
+});
+</script>
+</body>
+</html>
