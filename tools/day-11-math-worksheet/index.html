@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>口算题生成器 · AI帮我做 Day 11</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; background: #f6f7f6; color: #222; padding: 28px 16px; }
+  .wrap { max-width: 800px; margin: 0 auto; }
+  h1 { font-size: 24px; margin-bottom: 6px; }
+  .sub { color: #667; font-size: 14px; margin-bottom: 20px; }
+  .card { background: #fff; border-radius: 10px; padding: 18px; margin-bottom: 16px; box-shadow: 0 1px 4px rgba(0,0,0,.06); }
+  .card h2 { font-size: 16px; margin-bottom: 10px; }
+  .row { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
+  label { font-size: 14px; color: #445; }
+  select { padding: 6px 10px; border: 1px solid #ccd; border-radius: 8px; font-size: 14px; }
+  button { background: #3aa56d; color: #fff; border: none; border-radius: 8px; padding: 9px 22px; font-size: 15px; cursor: pointer; }
+  button.ghost { background: #eef4ef; color: #3aa56d; }
+  .hint { color: #889; font-size: 12px; margin-top: 8px; line-height: 1.7; }
+  #status { font-size: 14px; color: #556; margin-top: 8px; }
+  /* 卷面 */
+  .sheet { background: #fff; border-radius: 10px; padding: 28px 30px; box-shadow: 0 1px 4px rgba(0,0,0,.06); }
+  .sheet h3 { font-size: 17px; text-align: center; margin-bottom: 4px; }
+  .sheet .meta { text-align: center; color: #778; font-size: 13px; margin-bottom: 16px; }
+  .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px 10px; }
+  .q { font-size: 17px; font-family: "Songti SC", "SimSun", serif; white-space: nowrap; }
+  .q b { display: inline-block; min-width: 52px; border-bottom: 1px solid #99a; margin-left: 4px; font-weight: normal; }
+  .answers { border-top: 2px dashed #bbc; margin-top: 20px; padding-top: 12px; font-size: 14px; color: #345; line-height: 1.9; }
+  @media print {
+    body { background: #fff; padding: 0; }
+    .no-print { display: none !important; }
+    .wrap { max-width: none; }
+    .sheet { box-shadow: none; border-radius: 0; padding: 10mm 8mm; }
+    .grid { gap: 16px 8px; }
+    .q { font-size: 15pt; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="no-print">
+    <h1>口算题生成器</h1>
+    <div class="sub">选难度和题量，生成一套可打印的口算题，附答案。AI帮我做 · Day 11</div>
+    <div class="card">
+      <div class="row">
+        <label>难度
+          <select id="level">
+            <option value="1">一年级 · 十以内加减</option>
+            <option value="2">二年级 · 二十以内加减</option>
+            <option value="3" selected>三年级 · 表内乘除 + 两位数加减</option>
+          </select>
+        </label>
+        <label>题量
+          <select id="count">
+            <option>20</option>
+            <option selected>50</option>
+            <option>100</option>
+          </select>
+        </label>
+        <button id="gen">生成一套题</button>
+        <button class="ghost" id="print">打印 / 存 PDF</button>
+      </div>
+      <div id="status"></div>
+      <div class="hint">规则：减法不出负数；除法必整除且商在表内；不出现 ×1、÷1 这类送分题；同套题不重复。全部本地生成，不联网。</div>
+    </div>
+  </div>
+
+  <div class="sheet" id="sheet" style="display:none">
+    <h3>口算练习</h3>
+    <div class="meta" id="meta"></div>
+    <div class="grid" id="grid"></div>
+    <div class="answers" id="answers"></div>
+  </div>
+</div>
+
+<script>
+const rand = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+const pick = arr => arr[rand(0, arr.length - 1)];
+
+function genOne(level) {
+  // 级别 1：十以内加减；2：二十以内加减；3：表内乘除 + 两位数加减
+  // 约束：结果不超纲（十/二十以内的和差也不超）；减法非负；除法先定商再反推被除数，必整除且商在表内；乘除不出 ×1、÷1
+  let a, b, op;
+  if (level === 1) {
+    op = pick(['+', '-']);
+    if (op === '+') { a = rand(0, 10); b = rand(0, 10 - a); }
+    else { a = rand(0, 10); b = rand(0, a); }
+  } else if (level === 2) {
+    op = pick(['+', '-']);
+    if (op === '+') { a = rand(0, 20); b = rand(0, 20 - a); }
+    else { a = rand(0, 20); b = rand(0, a); }
+  } else {
+    op = pick(['+', '-', '×', '÷']);
+    if (op === '×') { a = rand(2, 9); b = rand(2, 9); }
+    else if (op === '÷') { b = rand(2, 9); const q = rand(2, 9); a = b * q; }
+    else { a = rand(10, 99); b = rand(10, 99); }
+  }
+  if (op === '-' && a < b) [a, b] = [b, a];
+  const ans = op === '+' ? a + b : op === '-' ? a - b : op === '×' ? a * b : a / b;
+  return { a, b, op, ans, text: a + ' ' + op + ' ' + b + ' = ' };
+}
+
+function genSet(level, count) {
+  const seen = new Set();
+  const list = [];
+  let guard = 0;
+  while (list.length < count && guard < count * 40) {
+    guard++;
+    const q = genOne(level);
+    if (seen.has(q.text)) continue;
+    seen.add(q.text);
+    list.push(q);
+  }
+  return list;
+}
+
+function render(level, count) {
+  const list = genSet(level, count);
+  const names = { 1: '十以内加减', 2: '二十以内加减', 3: '表内乘除 + 两位数加减' };
+  document.getElementById('meta').textContent = names[level] + ' · 共 ' + list.length + ' 题 · 姓名________ 日期________ 用时________';
+  const grid = document.getElementById('grid');
+  grid.innerHTML = '';
+  list.forEach((q, i) => {
+    const div = document.createElement('div');
+    div.className = 'q';
+    div.innerHTML = (i + 1) + '. ' + q.text + '<b></b>';
+    grid.appendChild(div);
+  });
+  document.getElementById('answers').innerHTML = '<b>答案：</b><br>' +
+    list.map((q, i) => (i + 1) + '.' + q.ans).join('　');
+  document.getElementById('sheet').style.display = 'block';
+  document.getElementById('status').textContent = '已生成 ' + list.length + ' 题（含答案页）。点「打印 / 存 PDF」即可输出纸张版。';
+  window.__lastSet = list;
+}
+
+document.getElementById('gen').addEventListener('click', () => {
+  render(parseInt(document.getElementById('level').value), parseInt(document.getElementById('count').value));
+});
+document.getElementById('print').addEventListener('click', () => window.print());
+</script>
+</body>
+</html>
