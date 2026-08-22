@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>二维码批量生成器 · AI帮我做 Day 12</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; background: #f6f7f6; color: #222; padding: 28px 16px; }
+  .wrap { max-width: 760px; margin: 0 auto; }
+  h1 { font-size: 24px; margin-bottom: 6px; }
+  .sub { color: #667; font-size: 14px; margin-bottom: 20px; }
+  .card { background: #fff; border-radius: 10px; padding: 18px; margin-bottom: 16px; box-shadow: 0 1px 4px rgba(0,0,0,.06); }
+  .card h2 { font-size: 16px; margin-bottom: 10px; }
+  textarea { width: 100%; height: 150px; border: 1px solid #d8dcd8; border-radius: 8px; padding: 10px; font-size: 14px; resize: vertical; }
+  .row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-top: 12px; }
+  button { background: #3aa56d; color: #fff; border: none; border-radius: 8px; padding: 9px 22px; font-size: 15px; cursor: pointer; }
+  button:disabled { background: #a9c9b6; cursor: wait; }
+  label { font-size: 14px; color: #445; }
+  select { padding: 6px 10px; border: 1px solid #ccd; border-radius: 8px; font-size: 14px; }
+  .hint { color: #889; font-size: 12px; margin-top: 8px; line-height: 1.7; }
+  #status { font-size: 14px; color: #556; margin-top: 10px; }
+  #codes { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 14px; }
+  .qr { text-align: center; }
+  .qr canvas { border: 1px solid #e4e8e4; border-radius: 6px; }
+  .qr .cap { font-size: 12px; color: #556; max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>二维码批量生成器</h1>
+  <div class="sub">一行一条内容，一次全部生成，打包下载。AI帮我做 · Day 12</div>
+
+  <div class="card">
+    <h2>内容（每行一条：网址、文本、Wi-Fi 串都行）</h2>
+    <textarea id="lines" placeholder="https://shop.example.com/item/101&#10;今日特价：红烧肉套餐&#10;WIFI:T:WPA;S:店里WiFi;P:pass1234;;"></textarea>
+    <div class="row">
+      <label>尺寸
+        <select id="size"><option value="200">200px</option><option value="300" selected>300px</option><option value="500">500px</option></select>
+      </label>
+      <button id="gen">全部生成</button>
+      <button id="zip" disabled>打包下载 ZIP</button>
+    </div>
+    <div id="status"></div>
+    <div class="hint">本地生成，内容不上传。标准白边距保证扫码成功率——别为了好看把白边裁掉。</div>
+  </div>
+
+  <div class="card"><div id="codes"></div></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
+<script src="vendor/jszip.min.js"></script>
+<script>
+// 关键：默认的 stringToBytes 只认 ASCII，中文会变成乱码字节——必须切到 UTF-8
+qrcode.stringToBytes = qrcode.stringToBytesFuncs['UTF-8'];
+
+let current = []; // { text, canvas }
+
+function renderOne(text, px) {
+  const qr = qrcode(0, 'M');
+  qr.addData(text);
+  qr.make();
+  const count = qr.getModuleCount();
+  const margin = 4; // 规范静区（白边）宽度，扫码成功率的关键
+  const cell = Math.max(2, Math.floor(px / (count + margin * 2)));
+  const real = (count + margin * 2) * cell;
+  const canvas = document.createElement('canvas');
+  canvas.width = real; canvas.height = real;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, real, real);
+  ctx.fillStyle = '#000000';
+  for (let r = 0; r < count; r++) {
+    for (let c = 0; c < count; c++) {
+      if (qr.isDark(r, c)) ctx.fillRect((c + margin) * cell, (r + margin) * cell, cell, cell);
+    }
+  }
+  return canvas;
+}
+
+function render() {
+  const lines = document.getElementById('lines').value.split('\n').map(s => s.trim()).filter(Boolean);
+  const px = parseInt(document.getElementById('size').value);
+  const box = document.getElementById('codes');
+  box.innerHTML = '';
+  current = [];
+  lines.forEach(text => {
+    try {
+      const canvas = renderOne(text, px);
+      const div = document.createElement('div');
+      div.className = 'qr';
+      div.appendChild(canvas);
+      const cap = document.createElement('div');
+      cap.className = 'cap';
+      cap.textContent = text;
+      div.appendChild(cap);
+      box.appendChild(div);
+      current.push({ text, canvas });
+    } catch (e) {
+      const err = document.createElement('div');
+      err.className = 'cap';
+      err.textContent = '「' + text.slice(0, 12) + '」生成失败：' + e.message;
+      box.appendChild(err);
+    }
+  });
+  document.getElementById('status').textContent = '已生成 ' + current.length + ' / ' + lines.length + ' 张。';
+  document.getElementById('zip').disabled = current.length === 0;
+}
+
+document.getElementById('gen').addEventListener('click', render);
+
+document.getElementById('zip').addEventListener('click', async () => {
+  const zip = new JSZip();
+  current.forEach((item, i) => {
+    item.canvas.toBlob(blob => zip.file('qr-' + String(i + 1).padStart(3, '0') + '.png', blob), 'image/png');
+  });
+  document.getElementById('status').textContent = '正在打包…';
+  setTimeout(async () => {
+    const blob = await zip.generateAsync({ type: 'blob' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'qrcodes.zip';
+    a.click();
+    URL.revokeObjectURL(a.href);
+    document.getElementById('status').textContent = '已打包 ' + current.length + ' 张，开始下载。';
+  }, 600);
+});
+</script>
+</body>
+</html>
