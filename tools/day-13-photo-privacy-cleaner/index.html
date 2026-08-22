@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>照片隐私清理器 · AI帮我做 Day 13</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; background: #f6f7f6; color: #222; padding: 28px 16px; }
+  .wrap { max-width: 720px; margin: 0 auto; }
+  h1 { font-size: 24px; margin-bottom: 6px; }
+  .sub { color: #667; font-size: 14px; margin-bottom: 20px; }
+  .card { background: #fff; border-radius: 10px; padding: 18px; margin-bottom: 16px; box-shadow: 0 1px 4px rgba(0,0,0,.06); }
+  .card h2 { font-size: 16px; margin-bottom: 10px; }
+  .row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+  button { background: #3aa56d; color: #fff; border: none; border-radius: 8px; padding: 9px 22px; font-size: 15px; cursor: pointer; }
+  button:disabled { background: #a9c9b6; cursor: wait; }
+  input[type=file] { font-size: 14px; }
+  .hint { color: #889; font-size: 12px; margin-top: 8px; line-height: 1.7; }
+  #status { font-size: 14px; color: #556; margin-top: 10px; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; margin-top: 10px; }
+  th, td { border: 1px solid #e0e4e0; padding: 6px 8px; text-align: left; }
+  th { background: #eef4ef; }
+  td img { width: 60px; height: 60px; object-fit: cover; border-radius: 4px; }
+  .tag { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 12px; }
+  .tag.warn { background: #fdeeee; color: #c05656; }
+  .tag.ok { background: #e8f5ec; color: #2c7a4b; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>照片隐私清理器</h1>
+  <div class="sub">发照片之前，批量擦掉位置、设备等 EXIF 信息。AI帮我做 · Day 13</div>
+
+  <div class="card">
+    <h2>选择照片（可多选，jpg / png）</h2>
+    <div class="row">
+      <input type="file" id="files" accept="image/jpeg,image/png" multiple>
+      <button id="clean" disabled>一键清理并打包</button>
+    </div>
+    <div id="status"></div>
+    <table id="list" style="display:none">
+      <thead><tr><th style="width:70px">预览</th><th>文件</th><th>原始尺寸</th><th>隐私信息</th><th>清理后</th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <div class="hint">原理：在浏览器里把照片重新绘制导出——位置、设备、拍摄时间等 EXIF 信息全部留在本地，不进入新文件。全程不上传。注意：清理即重编码，画质有极轻微影响。</div>
+  </div>
+</div>
+
+<script src="vendor/jszip.min.js"></script>
+<script>
+let items = []; // { file, blob, hasExif, done: blob|null }
+
+// 读取 JPEG 的 APP1/Exif 段，返回 { hasExif, orientation }
+async function readExif(file) {
+  if (!/jpe?g$/i.test(file.name) && file.type !== 'image/jpeg') return { hasExif: false, orientation: 1 };
+  const buf = new Uint8Array(await file.slice(0, 128 * 1024).arrayBuffer());
+  if (buf[0] !== 0xFF || buf[1] !== 0xD8) return { hasExif: false, orientation: 1 };
+  let i = 2;
+  while (i + 4 <= buf.length) {
+    if (buf[i] !== 0xFF) break;
+    const marker = buf[i + 1];
+    if (marker === 0xE1) {
+      const len = (buf[i + 2] << 8) | buf[i + 3];
+      const seg = new Uint8Array(buf.buffer, i + 4, Math.min(len - 2, buf.length - i - 4));
+      const s = new TextDecoder('latin1').decode(seg);
+      if (s.startsWith('Exif\u0000\u0000')) {
+        let orientation = 1;
+        // TIFF 头解析方向标签（0x0112）
+        const tiff = seg.slice(6);
+        const le = tiff[0] === 0x49;
+        const u16 = (p) => le ? tiff[p] | (tiff[p + 1] << 8) : (tiff[p] << 8) | tiff[p + 1];
+        const u32 = (p) => le ? (tiff[p] | (tiff[p + 1] << 8) | (tiff[p + 2] << 16) | (tiff[p + 3] << 24)) >>> 0
+                              : ((tiff[p] << 24) | (tiff[p + 1] << 16) | (tiff[p + 2] << 8) | tiff[p + 3]) >>> 0;
+        const ifd0 = u32(4);
+        const n = u16(ifd0);
+        for (let k = 0; k < n; k++) {
+          const e = ifd0 + 2 + k * 12;
+          if (u16(e) === 0x0112) { orientation = u16(e + 8); break; }
+        }
+        return { hasExif: true, orientation };
+      }
+    }
+    if (marker === 0xDA || marker === 0xD9) break;
+    const len = (buf[i + 2] << 8) | buf[i + 3];
+    i += 2 + len;
+  }
+  return { hasExif: false, orientation: 1 };
+}
+
+document.getElementById('files').addEventListener('change', async e => {
+  items = [];
+  const tbody = document.querySelector('#list tbody');
+  tbody.innerHTML = '';
+  document.getElementById('list').style.display = 'none';
+  for (const f of e.target.files) {
+    const exif = await readExif(f);
+    items.push({ file: f, ...exif, done: null });
+  }
+  render();
+  document.getElementById('clean').disabled = items.length === 0;
+  document.getElementById('status').textContent = items.filter(i => i.hasExif).length
+    ? '注意：' + items.filter(i => i.hasExif).length + ' 张带 EXIF 信息（可能含位置/设备），待清理。'
+    : '未检测到 EXIF（这些图已经干净，重导出同样安全）。';
+});
+
+function render() {
+  const tbody = document.querySelector('#list tbody');
+  tbody.innerHTML = '';
+  items.forEach(it => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = '<td><img src="' + URL.createObjectURL(it.file) + '"></td>' +
+      '<td>' + escapeHtml(it.file.name) + '</td>' +
+      '<td class="dim">—</td>' +
+      '<td>' + (it.hasExif ? '<span class="tag warn">有 EXIF</span>' : '<span class="tag ok">无</span>') + '</td>' +
+      '<td class="st">—</td>';
+    const img = new Image();
+    img.onload = () => { tr.querySelector('.dim').textContent = img.naturalWidth + '×' + img.naturalHeight; };
+    img.src = URL.createObjectURL(it.file);
+    tbody.appendChild(tr);
+    it._td = tr.querySelector('.st');
+  });
+  document.getElementById('list').style.display = items.length ? 'table' : 'none';
+}
+
+document.getElementById('clean').addEventListener('click', async () => {
+  const btn = document.getElementById('clean');
+  btn.disabled = true;
+  document.getElementById('status').textContent = '清理中…';
+  const zip = new JSZip();
+  for (const it of items) {
+    const img = await createImageBitmap(it.file); // 现代浏览器自动按 EXIF 方向摆正
+    const canvas = document.createElement('canvas');
+    canvas.width = img.width; canvas.height = img.height;
+    canvas.getContext('2d').drawImage(img, 0, 0);
+    // 格式跟进出：PNG 进 PNG 出（保住透明），JPEG 进 JPEG 出（0.92 质量）
+    const isPng = it.file.type === 'image/png';
+    const blob = await new Promise(r => canvas.toBlob(r, isPng ? 'image/png' : 'image/jpeg', 0.92));
+    it.done = blob;
+    it._td.innerHTML = '<span class="tag ok">已清理</span>';
+    zip.file('clean-' + it.file.name.replace(/\.[^.]+$/, '') + (isPng ? '.png' : '.jpg'), blob);
+  }
+  const out = await zip.generateAsync({ type: 'blob' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(out);
+  a.download = 'cleaned-photos.zip';
+  a.click();
+  URL.revokeObjectURL(a.href);
+  document.getElementById('status').textContent = items.length + ' 张已清理并打包，开始下载。';
+  window.__done = items.map(i => ({ name: i.file.name, hasExif: i.hasExif, orientation: i.orientation }));
+  btn.disabled = false;
+});
+
+function escapeHtml(s) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+</script>
+</body>
+</html>
