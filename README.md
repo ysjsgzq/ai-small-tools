@@ -14,7 +14,8 @@
 | Day 09 | 评论归类器 | 事实/建议/情绪拆分、六大类问题归堆、原话可回查 | [`tools/day-09-comment-classifier/`](tools/day-09-comment-classifier/) |
 | Day 10 | PDF 合并器 | 浏览器本地合并、页数预览、顺序调整 | [`tools/day-10-pdf-merger/`](tools/day-10-pdf-merger/) |
 | Day 11 | 口算题生成器 | 分难度出题、约束保证、可打印含答案页 | [`tools/day-11-math-worksheet/`](tools/day-11-math-worksheet/) |
-| Day 12 | AA 分账计算器 | 净额贪心最少转账、整数分运算、余数分摊 | [`tools/day-12-aa-splitter/`](tools/day-12-aa-splitter/) |
+| Day 12 | 二维码批量生成器 | 一行一条批量生成、解码回读自检、ZIP 打包 | [`tools/day-12-qr-batch-generator/`](tools/day-12-qr-batch-generator/) |
+| Day 13 | 照片隐私清理器 | 批量擦除 EXIF/GPS、格式跟进出、方向自动摆正 | [`tools/day-13-photo-privacy-cleaner/`](tools/day-13-photo-privacy-cleaner/) |
 
 ## 仓库结构
 
@@ -63,10 +64,15 @@
     │   ├── README.md
     │   ├── index.html
     │   └── verify.js
-    └── day-12-aa-splitter/
+    ├── day-12-qr-batch-generator/
+    │   ├── README.md
+    │   ├── index.html
+    │   └── vendor/
+    └── day-13-photo-privacy-cleaner/
         ├── README.md
         ├── index.html
-        └── verify.js
+        ├── make_test_photo.py
+        └── vendor/
 ```
 
 后续工具统一添加到 `tools/` 下，每个工具使用独立文件夹，目录名采用 `day-序号-英文名称` 格式。
