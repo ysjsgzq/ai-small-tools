@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AA 分账计算器 · AI帮我做 Day 12</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; background: #f6f7f6; color: #222; padding: 28px 16px; }
+  .wrap { max-width: 640px; margin: 0 auto; }
+  h1 { font-size: 24px; margin-bottom: 6px; }
+  .sub { color: #667; font-size: 14px; margin-bottom: 20px; }
+  .card { background: #fff; border-radius: 10px; padding: 18px; margin-bottom: 16px; box-shadow: 0 1px 4px rgba(0,0,0,.06); }
+  .card h2 { font-size: 16px; margin-bottom: 10px; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td { border: 1px solid #e0e4e0; padding: 6px 8px; text-align: left; }
+  th { background: #eef4ef; }
+  td input { width: 100%; border: 1px solid #ccd; border-radius: 6px; padding: 5px 8px; font-size: 14px; }
+  .row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-top: 12px; }
+  button { background: #3aa56d; color: #fff; border: none; border-radius: 8px; padding: 9px 22px; font-size: 15px; cursor: pointer; }
+  button.small { background: #eef4ef; color: #3aa56d; padding: 5px 14px; font-size: 13px; }
+  .hint { color: #889; font-size: 12px; margin-top: 8px; line-height: 1.7; }
+  #status { font-size: 14px; color: #556; margin-top: 10px; }
+  .transfer { font-size: 16px; line-height: 2; }
+  .transfer b { color: #2c7a4b; }
+  .check { color: #567; font-size: 13px; margin-top: 10px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>AA 分账计算器</h1>
+  <div class="sub">聚餐后谁付了多少都记不清？输入每人已付金额，算出最少转账方案。AI帮我做 · Day 12</div>
+
+  <div class="card">
+    <h2>参与的人（姓名 + 已付金额，没付的填 0）</h2>
+    <table id="people">
+      <thead><tr><th style="width:36%">姓名</th><th>已付（元）</th><th style="width:20%">操作</th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <div class="row">
+      <button class="small" id="add">加一个人</button>
+      <button id="calc">算清谁转谁</button>
+    </div>
+    <div id="status"></div>
+    <div class="hint">全部在浏览器本地计算。金额建议照着微信 / 支付宝的账单记录填，别凭记忆。</div>
+  </div>
+
+  <div class="card" id="result" style="display:none">
+    <h2>转账方案</h2>
+    <div class="transfer" id="transfers"></div>
+    <div class="check" id="check"></div>
+  </div>
+</div>
+
+<script>
+// 核心逻辑：全部用「分」（整数）计算，先算每人净额，再贪心配对求最少转账
+// 两条铁律：金额不出现浮点幽灵小数；人均除不尽时按「最大余数法」，前 r 人各多担一分
+function splitBill(paidMap) {
+  const names = Object.keys(paidMap);
+  const paidCents = {};
+  names.forEach(n => { paidCents[n] = Math.round(paidMap[n] * 100); });
+  const totalCents = names.reduce((s, n) => s + paidCents[n], 0);
+  const base = Math.floor(totalCents / names.length);
+  const rem = totalCents - base * names.length;
+  const perText = rem === 0
+    ? (totalCents / names.length / 100).toFixed(2)
+    : '¥' + (base / 100).toFixed(2) + '（前 ' + rem + ' 人各多担 1 分）';
+  // 净额 = 已付 - 应付（正数=别人欠他，负数=他欠别人），单位：分
+  const nets = names.map((n, i) => ({ name: n, net: paidCents[n] - (base + (i < rem ? 1 : 0)) }));
+  const transfers = [];
+  const creditors = nets.filter(p => p.net > 0).sort((a, b) => b.net - a.net);
+  const debtors = nets.filter(p => p.net < 0).sort((a, b) => a.net - b.net);
+  let i = 0, j = 0;
+  while (i < creditors.length && j < debtors.length) {
+    const c = creditors[i], d = debtors[j];
+    const amt = Math.min(c.net, -d.net);
+    if (amt > 0) transfers.push({ from: d.name, to: c.name, amt });
+    c.net -= amt;
+    d.net += amt;
+    if (c.net === 0) i++;
+    if (d.net === 0) j++;
+  }
+  return { totalCents, perText, transfers };  // transfers 金额单位：分
+}
+
+// —— 界面 ——
+function addRow(name, paid) {
+  const tr = document.createElement('tr');
+  tr.innerHTML = '<td><input class="pname" value="' + (name || '') + '" placeholder="姓名"></td>' +
+    '<td><input class="ppaid" type="number" step="0.01" min="0" value="' + (paid !== undefined ? paid : '') + '" placeholder="0.00"></td>' +
+    '<td><button class="small del">删</button></td>';
+  tr.querySelector('.del').onclick = () => tr.remove();
+  document.querySelector('#people tbody').appendChild(tr);
+}
+document.getElementById('add').onclick = () => addRow();
+addRow('小张', 436); addRow('小李', 128.5); addRow('小王', 0); addRow('小赵', 0);
+
+document.getElementById('calc').onclick = () => {
+  const rows = [...document.querySelectorAll('#people tbody tr')];
+  const paidMap = {};
+  let ok = true;
+  rows.forEach(r => {
+    const name = r.querySelector('.pname').value.trim() || '某人';
+    const paid = parseFloat(r.querySelector('.ppaid').value) || 0;
+    paidMap[name + (paidMap[name] !== undefined ? '_' + Math.random().toString(36).slice(2, 5) : '')] = paid;
+  });
+  if (Object.keys(paidMap).length < 2) { document.getElementById('status').textContent = '至少两个人才能 AA'; return; }
+  const { totalCents, perText, transfers } = splitBill(paidMap);
+  document.getElementById('result').style.display = 'block';
+  document.getElementById('transfers').innerHTML = transfers.length
+    ? transfers.map(t => '<b>' + t.from + '</b> → <b>' + t.to + '</b>：¥' + (t.amt / 100).toFixed(2)).join('<br>')
+    : '已经两清，不用转啦';
+  document.getElementById('check').textContent = '总消费 ¥' + (totalCents / 100).toFixed(2) + '，人均 ' + perText + '，共 ' + transfers.length + ' 笔转账。';
+  window.__last = { paidMap, totalCents, perText, transfers };
+};
+</script>
+</body>
+</html>

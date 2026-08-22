@@ -14,6 +14,7 @@
 | Day 09 | 评论归类器 | 事实/建议/情绪拆分、六大类问题归堆、原话可回查 | [`tools/day-09-comment-classifier/`](tools/day-09-comment-classifier/) |
 | Day 10 | PDF 合并器 | 浏览器本地合并、页数预览、顺序调整 | [`tools/day-10-pdf-merger/`](tools/day-10-pdf-merger/) |
 | Day 11 | 口算题生成器 | 分难度出题、约束保证、可打印含答案页 | [`tools/day-11-math-worksheet/`](tools/day-11-math-worksheet/) |
+| Day 12 | AA 分账计算器 | 净额贪心最少转账、整数分运算、余数分摊 | [`tools/day-12-aa-splitter/`](tools/day-12-aa-splitter/) |
 
 ## 仓库结构
 
@@ -58,7 +59,11 @@
     │   ├── README.md
     │   ├── index.html
     │   └── make_test_pdfs.py
-    └── day-11-math-worksheet/
+    ├── day-11-math-worksheet/
+    │   ├── README.md
+    │   ├── index.html
+    │   └── verify.js
+    └── day-12-aa-splitter/
         ├── README.md
         ├── index.html
         └── verify.js
