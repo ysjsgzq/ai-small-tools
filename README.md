@@ -16,6 +16,7 @@
 | Day 11 | 口算题生成器 | 分难度出题、约束保证、可打印含答案页 | [`tools/day-11-math-worksheet/`](tools/day-11-math-worksheet/) |
 | Day 12 | 二维码批量生成器 | 一行一条批量生成、解码回读自检、ZIP 打包 | [`tools/day-12-qr-batch-generator/`](tools/day-12-qr-batch-generator/) |
 | Day 13 | 照片隐私清理器 | 批量擦除 EXIF/GPS、格式跟进出、方向自动摆正 | [`tools/day-13-photo-privacy-cleaner/`](tools/day-13-photo-privacy-cleaner/) |
+| Day 14 | 文案极限词检测器 | 广告法极限词红字标注、白名单防误伤、长词优先去重 | [`tools/day-14-ad-word-checker/`](tools/day-14-ad-word-checker/) |
 
 ## 仓库结构
 
@@ -68,11 +69,14 @@
     │   ├── README.md
     │   ├── index.html
     │   └── vendor/
-    └── day-13-photo-privacy-cleaner/
+    ├── day-13-photo-privacy-cleaner/
+    │   ├── README.md
+    │   ├── index.html
+    │   ├── make_test_photo.py
+    │   └── vendor/
+    └── day-14-ad-word-checker/
         ├── README.md
-        ├── index.html
-        ├── make_test_photo.py
-        └── vendor/
+        └── index.html
 ```
 
 后续工具统一添加到 `tools/` 下，每个工具使用独立文件夹，目录名采用 `day-序号-英文名称` 格式。

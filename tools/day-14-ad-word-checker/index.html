@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>文案极限词检测器 · AI帮我做 Day 14</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; background: #f6f7f6; color: #222; padding: 28px 16px; }
+  .wrap { max-width: 720px; margin: 0 auto; }
+  h1 { font-size: 24px; margin-bottom: 6px; }
+  .sub { color: #667; font-size: 14px; margin-bottom: 20px; }
+  .card { background: #fff; border-radius: 10px; padding: 18px; margin-bottom: 16px; box-shadow: 0 1px 4px rgba(0,0,0,.06); }
+  .card h2 { font-size: 16px; margin-bottom: 10px; }
+  textarea { width: 100%; height: 170px; border: 1px solid #d8dcd8; border-radius: 8px; padding: 10px; font-size: 14px; resize: vertical; }
+  .row { display: flex; gap: 12px; align-items: center; margin-top: 12px; flex-wrap: wrap; }
+  button { background: #3aa56d; color: #fff; border: none; border-radius: 8px; padding: 9px 22px; font-size: 15px; cursor: pointer; }
+  .hint { color: #889; font-size: 12px; margin-top: 8px; line-height: 1.7; }
+  #status { font-size: 14px; color: #556; margin-top: 10px; }
+  mark { background: #ffd9d9; color: #b03030; padding: 0 3px; border-radius: 3px; font-weight: 600; }
+  .preview { font-size: 15px; line-height: 2; background: #fafcfa; border: 1px dashed #ccd; border-radius: 8px; padding: 12px; margin-top: 10px; }
+  ul { margin: 10px 0 0 20px; font-size: 14px; line-height: 1.9; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>文案极限词检测器</h1>
+  <div class="sub">发文案之前，把广告法禁用的极限词先挑出来。AI帮我做 · Day 14</div>
+
+  <div class="card">
+    <h2>粘贴文案</h2>
+    <textarea id="text" placeholder="把要发的朋友圈、商品文案、海报文字贴进来…"></textarea>
+    <div class="row"><button id="scan">开始检测</button><span id="status"></span></div>
+  </div>
+
+  <div class="card" id="result" style="display:none">
+    <h2>检测结果</h2>
+    <div class="preview" id="preview"></div>
+    <ul id="list"></ul>
+    <div class="hint">只提示风险，不替你改词；「最近」「第一时间」这类日常用语已自动排除；单字「最」类词以人工复核为准。</div>
+  </div>
+</div>
+
+<script>
+// 广告法禁用极限词（节选常见项）
+const BANNED = ['全网最低', '全城最低', '最低价', '史上', '终极', '顶尖', '顶级', '极致', '极品', '完美', '绝无仅有', '独一无二', '举世无双', '无与伦比', '空前绝后', '独家', '唯一', '首选', '王牌', '冠军', '销量第一', '排名第一', '全国第一', '第一', 'NO.1', '100%', '百分百', '绝对', '永久', '万能', '神效', '特效', '国家级', '世界级', '最强', '最好', '最优', '最先进', '最顶级', '最'];
+// 日常用语白名单：先遮蔽再扫描，避免「最近/第一时间」被「最/第一」误伤
+const WHITELIST = ['最近', '最后', '最终', '第一时间', '第一次', '第一印象'];
+
+function scan(text) {
+  // 1) 白名单短语先占位（「最近」「第一时间」不该被「最/第一」误伤）
+  const wl = new Array(text.length).fill(false);
+  for (const w of WHITELIST) {
+    let idx = text.indexOf(w);
+    while (idx !== -1) {
+      for (let k = 0; k < w.length; k++) wl[idx + k] = true;
+      idx = text.indexOf(w, idx + 1);
+    }
+  }
+  // 2) 极限词按长度降序扫描，命中区间占位——「全网最低」不再被单字「最」重复计数
+  const hits = [];
+  const used = new Array(text.length).fill(false);
+  for (const word of [...BANNED].sort((a, b) => b.length - a.length)) {
+    let idx = text.indexOf(word);
+    while (idx !== -1) {
+      let free = true;
+      for (let k = 0; k < word.length; k++) if (wl[idx + k] || used[idx + k]) free = false;
+      if (free) {
+        hits.push({ word, idx });
+        for (let k = 0; k < word.length; k++) used[idx + k] = true;
+      }
+      idx = text.indexOf(word, idx + 1);
+    }
+  }
+  hits.sort((a, b) => a.idx - b.idx);
+  return hits;
+}
+
+function render() {
+  const text = document.getElementById('text').value;
+  if (!text.trim()) { document.getElementById('status').textContent = '请先粘贴文案'; return; }
+  const hits = scan(text);
+  window.__hits = hits;
+  window.__text = text;
+  let html = '';
+  let pos = 0;
+  for (const h of hits) {
+    html += escapeHtml(text.slice(pos, h.idx)) + '<mark>' + escapeHtml(h.word) + '</mark>';
+    pos = h.idx + h.word.length;
+  }
+  html += escapeHtml(text.slice(pos));
+  document.getElementById('preview').innerHTML = html.replace(/\n/g, '<br>');
+  const ul = document.getElementById('list');
+  ul.innerHTML = hits.length
+    ? hits.map(h => '<li>「<b>' + escapeHtml(h.word) + '</b>」——第 ' + (text.slice(0, h.idx).length + 1) + ' 字起</li>').join('')
+    : '<li>未检出极限词。</li>';
+  document.getElementById('result').style.display = 'block';
+  document.getElementById('status').textContent = hits.length ? '检出 ' + hits.length + ' 处，建议逐条复核改写。' : '未检出。';
+}
+
+document.getElementById('scan').addEventListener('click', render);
+function escapeHtml(s) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+</script>
+</body>
+</html>
