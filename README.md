@@ -17,6 +17,7 @@
 | Day 12 | 二维码批量生成器 | 一行一条批量生成、解码回读自检、ZIP 打包 | [`tools/day-12-qr-batch-generator/`](tools/day-12-qr-batch-generator/) |
 | Day 13 | 照片隐私清理器 | 批量擦除 EXIF/GPS、格式跟进出、方向自动摆正 | [`tools/day-13-photo-privacy-cleaner/`](tools/day-13-photo-privacy-cleaner/) |
 | Day 14 | 文案极限词检测器 | 广告法极限词红字标注、白名单防误伤、长词优先去重 | [`tools/day-14-ad-word-checker/`](tools/day-14-ad-word-checker/) |
+| Day 15 | 图片转文字 | 浏览器本地 OCR、放大灰度预处理、批量识别可复制 | [`tools/day-15-image-to-text/`](tools/day-15-image-to-text/) |
 
 ## 仓库结构
 
@@ -74,7 +75,10 @@
     │   ├── index.html
     │   ├── make_test_photo.py
     │   └── vendor/
-    └── day-14-ad-word-checker/
+    ├── day-14-ad-word-checker/
+    │   ├── README.md
+    │   └── index.html
+    └── day-15-image-to-text/
         ├── README.md
         └── index.html
 ```
