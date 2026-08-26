@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>文本对比工具 · 两版差异一眼看清</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", "Segoe UI", sans-serif;
+    background: #f6f8f6; color: #22302a; min-height: 100vh; padding: 40px 16px;
+  }
+  .wrap { max-width: 900px; margin: 0 auto; }
+  .top-bar { height: 6px; background: #58B586; border-radius: 3px; margin-bottom: 28px; }
+  .kicker { color: #58B586; font-weight: 600; font-size: 14px; letter-spacing: 2px; margin-bottom: 8px; }
+  h1 { font-size: 28px; margin-bottom: 6px; }
+  .sub { color: #6b7a72; font-size: 14px; margin-bottom: 24px; line-height: 1.7; }
+  .card {
+    background: #fff; border-radius: 12px; padding: 22px;
+    box-shadow: 0 1px 4px rgba(30, 60, 45, .06); margin-bottom: 16px;
+  }
+  .card h2 { font-size: 15px; color: #46564e; margin-bottom: 12px; }
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media (max-width: 640px) { .cols { grid-template-columns: 1fr; } }
+  textarea {
+    width: 100%; min-height: 170px; font-size: 14px; line-height: 1.8; padding: 12px;
+    border: 1px solid #d8e2dc; border-radius: 8px; outline: none; background: #fbfdfb;
+    font-family: inherit; resize: vertical;
+  }
+  textarea:focus { border-color: #58B586; }
+  .col-label { font-size: 13px; color: #6b7a72; margin-bottom: 6px; }
+  .stats { font-size: 14px; color: #46564e; }
+  .stats b { color: #1e7a52; }
+  .stats .del { color: #b04a2f; }
+  .stats .add { color: #1e7a52; }
+  .diff-list { font-size: 14px; line-height: 1.9; max-height: 480px; overflow: auto; }
+  .row { padding: 2px 8px; border-radius: 4px; white-space: pre-wrap; word-break: break-all; }
+  .row .ln { color: #9aa8a0; font-size: 12px; margin-right: 8px; user-select: none; }
+  .row.same { color: #8a978f; background: #fafbfa; }
+  .row.mod { background: #fffdf3; border: 1px solid #f0e9d0; }
+  .row.del-row { background: #fdf3ef; border: 1px solid #f2d9cc; }
+  .row.add-row { background: #eef9f1; border: 1px solid #d5ecdd; }
+  .tag {
+    display: inline-block; font-size: 11px; border-radius: 3px; padding: 0 5px;
+    margin-right: 6px; color: #fff; vertical-align: 1px;
+  }
+  .tag.mod { background: #c9a227; }
+  .tag.del-row { background: #b04a2f; }
+  .tag.add-row { background: #2f8f63; }
+  .d { background: #f7dcd2; color: #8c3018; text-decoration: line-through; border-radius: 2px; padding: 0 1px; }
+  .a { background: #cdeed9; color: #1c6b45; border-radius: 2px; padding: 0 1px; }
+  button.primary {
+    background: #58B586; color: #fff; border: none; border-radius: 8px;
+    font-size: 15px; padding: 10px 26px; cursor: pointer; margin-top: 12px;
+  }
+  button.primary:hover { background: #4aa377; }
+  .notes { font-size: 12.5px; color: #7c8a82; line-height: 1.9; }
+  .notes li { margin-left: 18px; }
+  .foot { text-align: center; color: #9aa8a0; font-size: 12px; margin-top: 26px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top-bar"></div>
+  <div class="kicker">AI帮我做 · DAY 16</div>
+  <h1>文本对比工具</h1>
+  <p class="sub">两版文字贴进来，增、删、改逐字标色，改了哪里一眼看清。适合合同改版、论文修改、方案往返。全程浏览器本地计算，不联网、不上传。</p>
+
+  <div class="card">
+    <h2>贴入两个版本</h2>
+    <div class="cols">
+      <div>
+        <div class="col-label">原版本</div>
+        <textarea id="oldText" placeholder="粘贴旧版全文……">第一条：甲方负责供货。
+第二条：乙方负责验收。
+第三条：违约金为合同额的 5%。</textarea>
+      </div>
+      <div>
+        <div class="col-label">新版本</div>
+        <textarea id="newText" placeholder="粘贴新版全文……">第一条：甲方负责供货。
+第二条：丙方负责验收。
+第三条：违约金为合同额的 10%。
+第四条：争议由甲方所在地法院管辖。</textarea>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>对比结果</h2>
+    <div class="stats" id="stats"></div>
+    <div class="diff-list" id="diffList" style="margin-top: 10px;"></div>
+    <button class="primary" id="copyBtn">复制差异清单</button>
+  </div>
+
+  <div class="card">
+    <h2>原理与边界</h2>
+    <ul class="notes">
+      <li>算法自写、零依赖：先按行做最长公共子序列（LCS）找出改动区，再在改动的行内按「中文字 / 英文词」为单元做第二次 LCS，得到字级差异。</li>
+      <li>英文按整词比对（1.2.3 是一个单元），不会把一个单词拆成字母产生噪音。</li>
+      <li>段落移动会被显示为「一删一增」——diff 判断内容增删，不追踪位置移动。</li>
+      <li>超长文本（单侧超过 4000 行）建议分段对比；本地计算，关闭页面即忘。</li>
+    </ul>
+  </div>
+
+  <p class="foot">本地计算 · 无网络请求 · AI帮我做 · Day 16</p>
+</div>
+
+<script>
+(function () {
+  function tokenize(s) {
+    return s.match(/[\u4e00-\u9fff]|[A-Za-z0-9]+(?:[.'][A-Za-z0-9]+)*|\s+|[^\sA-Za-z0-9\u4e00-\u9fff]/g) || []
+  }
+
+  // 对 token 数组做 LCS diff，返回操作序列
+  function diffTokens(a, b) {
+    var n = a.length, m = b.length
+    var dp = []
+    for (var i = 0; i <= n; i++) { dp.push(new Uint32Array(m + 1)) }
+    for (i = n - 1; i >= 0; i--) for (var j = m - 1; j >= 0; j--)
+      dp[i][j] = a[i] === b[j] ? dp[i + 1][j + 1] + 1 : Math.max(dp[i + 1][j], dp[i][j + 1])
+    var ops = []
+    i = 0; j = 0
+    while (i < n && j < m) {
+      if (a[i] === b[j]) { ops.push({ op: '=', t: a[i] }); i++; j++ }
+      else if (dp[i + 1][j] >= dp[i][j + 1]) { ops.push({ op: '-', t: a[i] }); i++ }
+      else { ops.push({ op: '+', t: b[j] }); j++ }
+    }
+    while (i < n) ops.push({ op: '-', t: a[i++] })
+    while (j < m) ops.push({ op: '+', t: b[j++] })
+    return ops
+  }
+
+  // 第二版：两级对比——先按行 LCS 找改动区，再在改动行内按字/词二次 LCS
+  function diff(oldText, newText) {
+    var A = oldText === '' ? [] : oldText.split('\n')
+    var B = newText === '' ? [] : newText.split('\n')
+    if (A.length > 4000 || B.length > 4000) return { error: '单侧超过 4000 行，建议分段对比' }
+    var lineOps = diffTokens(A, B)
+    var rows = [], report = []
+    var addTok = 0, delTok = 0, modRows = 0, addRows = 0, delRows = 0
+    var oldLn = 0, newLn = 0
+    var i = 0
+    while (i < lineOps.length) {
+      if (lineOps[i].op === '=') {
+        oldLn++; newLn++
+        rows.push({ type: '=', text: lineOps[i].t, oldLn: oldLn, newLn: newLn })
+        i++; continue
+      }
+      var dels = [], ins = []
+      while (i < lineOps.length && lineOps[i].op !== '=') {
+        if (lineOps[i].op === '-') dels.push(lineOps[i].t); else ins.push(lineOps[i].t)
+        i++
+      }
+      var k = Math.min(dels.length, ins.length)
+      for (var d = 0; d < k; d++) {
+        oldLn++; newLn++; modRows++
+        var ops = diffTokens(tokenize(dels[d]), tokenize(ins[d]))
+        var da = 0, aa = 0
+        for (var op of ops) { if (op.op === '-') { da++; delTok++ } else if (op.op === '+') { aa++; addTok++ } }
+        rows.push({ type: '~', old: dels[d], new: ins[d], ops: ops, oldLn: oldLn, newLn: newLn })
+        report.push('[修改] 第' + oldLn + '行：' + dels[d] + '  →  ' + ins[d])
+      }
+      for (d = k; d < dels.length; d++) {
+        oldLn++; delRows++
+        var dt = tokenize(dels[d]).length; delTok += dt
+        rows.push({ type: '-', old: dels[d], oldLn: oldLn })
+        report.push('[删除] 第' + oldLn + '行：' + dels[d])
+      }
+      for (d = k; d < ins.length; d++) {
+        newLn++; addRows++
+        var at = tokenize(ins[d]).length; addTok += at
+        rows.push({ type: '+', new: ins[d], newLn: newLn })
+        report.push('[新增] 第' + newLn + '行：' + ins[d])
+      }
+    }
+    return { rows: rows, report: report, addTok: addTok, delTok: delTok, modRows: modRows, addRows: addRows, delRows: delRows }
+  }
+
+  function renderRow(row) {
+    var esc = escapeHtml
+    if (row.type === '=') return '<div class="row same"><span class="ln">' + row.newLn + '</span>' + esc(row.text) + '</div>'
+    if (row.type === '-') return '<div class="row del-row"><span class="tag del-row">删</span><span class="ln">原' + row.oldLn + '</span>' + esc(row.old) + '</div>'
+    if (row.type === '+') return '<div class="row add-row"><span class="tag add-row">增</span><span class="ln">新' + row.newLn + '</span>' + esc(row.new) + '</div>'
+    var inner = ''
+    for (var op of row.ops) {
+      if (op.op === '=') inner += esc(op.t)
+      else if (op.op === '-') inner += '<span class="d">' + esc(op.t) + '</span>'
+      else inner += '<span class="a">' + esc(op.t) + '</span>'
+    }
+    return '<div class="row mod"><span class="tag mod">改</span><span class="ln">第' + row.oldLn + '行</span>' + inner + '</div>'
+  }
+
+  function render() {
+    var oldText = document.getElementById('oldText').value
+    var newText = document.getElementById('newText').value
+    var r = diff(oldText, newText)
+    var list = document.getElementById('diffList')
+    var stats = document.getElementById('stats')
+    if (r.error) { stats.textContent = r.error; list.innerHTML = ''; window.__last = { error: r.error }; return }
+    var html = ''
+    for (var row of r.rows) html += renderRow(row)
+    var total = r.modRows + r.addRows + r.delRows
+    stats.innerHTML = total === 0
+      ? '两个版本<b>完全一致</b>'
+      : '修改 <b>' + r.modRows + '</b> 行 · 新增 <b class="add">' + r.addRows + '</b> 行 · 删除 <b class="del">' + r.delRows + '</b> 行 · 字/词级：新增 <b class="add">' + r.addTok + '</b> 删除 <b class="del">' + r.delTok + '</b>'
+    list.innerHTML = html
+    window.__last = { error: null, modRows: r.modRows, addRows: r.addRows, delRows: r.delRows, addTok: r.addTok, delTok: r.delTok, report: r.report }
+  }
+
+  function escapeHtml(s) {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  }
+
+  document.getElementById('copyBtn').addEventListener('click', function () {
+    var last = window.__last
+    if (!last || last.error || !last.report || !last.report.length) return
+    var ta = document.createElement('textarea')
+    ta.value = last.report.join('\n')
+    document.body.appendChild(ta); ta.select()
+    document.execCommand('copy')
+    document.body.removeChild(ta)
+    var b = this; b.textContent = '已复制'
+    setTimeout(function () { b.textContent = '复制差异清单' }, 1200)
+  })
+  document.getElementById('oldText').addEventListener('input', render)
+  document.getElementById('newText').addEventListener('input', render)
+  window.__diff = diff
+  window.__tokenize = tokenize
+  render()
+})();
+</script>
+</body>
+</html>
