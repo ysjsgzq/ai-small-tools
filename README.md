@@ -18,7 +18,7 @@
 | Day 13 | 照片隐私清理器 | 批量擦除 EXIF/GPS、格式跟进出、方向自动摆正 | [`tools/day-13-photo-privacy-cleaner/`](tools/day-13-photo-privacy-cleaner/) |
 | Day 14 | 文案极限词检测器 | 广告法极限词红字标注、白名单防误伤、长词优先去重 | [`tools/day-14-ad-word-checker/`](tools/day-14-ad-word-checker/) |
 | Day 15 | 图片转文字 | 浏览器本地 OCR、放大灰度预处理、批量识别可复制 | [`tools/day-15-image-to-text/`](tools/day-15-image-to-text/) |
-| Day 16 | 加班费计算器 | 劳动法口径三类倍率、21.75 天折算、30 天对照看差额 | [`tools/day-16-overtime-pay-calculator/`](tools/day-16-overtime-pay-calculator/) |
+| Day 16 | 文字敏感信息打码工具 | 手机号/身份证/银行卡/邮箱一键打星号、Luhn 防误伤、本地处理 | [`tools/day-16-text-redactor/`](tools/day-16-text-redactor/) |
 
 ## 仓库结构
 
@@ -82,7 +82,7 @@
     ├── day-15-image-to-text/
     │   ├── README.md
     │   └── index.html
-    └── day-16-overtime-pay-calculator/
+    └── day-16-text-redactor/
         ├── README.md
         └── index.html
 ```
