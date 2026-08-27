@@ -19,6 +19,7 @@
 | Day 14 | 文案极限词检测器 | 广告法极限词红字标注、白名单防误伤、长词优先去重 | [`tools/day-14-ad-word-checker/`](tools/day-14-ad-word-checker/) |
 | Day 15 | 图片转文字 | 浏览器本地 OCR、放大灰度预处理、批量识别可复制 | [`tools/day-15-image-to-text/`](tools/day-15-image-to-text/) |
 | Day 16 | 文本对比工具 | 两级 LCS 逐字标差异、行号定位、差异清单可复制 | [`tools/day-16-text-diff/`](tools/day-16-text-diff/) |
+| Day 17 | 字数统计工具 | Word 口径分词、六口径一次算清、投稿/公文/作文场景 | [`tools/day-17-word-counter/`](tools/day-17-word-counter/) |
 
 ## 仓库结构
 
@@ -82,7 +83,10 @@
     ├── day-15-image-to-text/
     │   ├── README.md
     │   └── index.html
-    └── day-16-text-diff/
+    ├── day-16-text-diff/
+    │   ├── README.md
+    │   └── index.html
+    └── day-17-word-counter/
         ├── README.md
         └── index.html
 ```

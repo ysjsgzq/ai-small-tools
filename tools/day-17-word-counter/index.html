@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>字数统计工具 · 投稿/公文/作文按口径精确计数</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", "Segoe UI", sans-serif;
+    background: #f6f8f6; color: #22302a; min-height: 100vh; padding: 40px 16px;
+  }
+  .wrap { max-width: 760px; margin: 0 auto; }
+  .top-bar { height: 6px; background: #58B586; border-radius: 3px; margin-bottom: 28px; }
+  .kicker { color: #58B586; font-weight: 600; font-size: 14px; letter-spacing: 2px; margin-bottom: 8px; }
+  h1 { font-size: 28px; margin-bottom: 6px; }
+  .sub { color: #6b7a72; font-size: 14px; margin-bottom: 24px; line-height: 1.7; }
+  .card {
+    background: #fff; border-radius: 12px; padding: 22px;
+    box-shadow: 0 1px 4px rgba(30, 60, 45, .06); margin-bottom: 16px;
+  }
+  .card h2 { font-size: 15px; color: #46564e; margin-bottom: 12px; }
+  textarea {
+    width: 100%; min-height: 180px; font-size: 15px; line-height: 1.8; padding: 12px;
+    border: 1px solid #d8e2dc; border-radius: 8px; outline: none; background: #fbfdfb;
+    font-family: inherit; resize: vertical;
+  }
+  textarea:focus { border-color: #58B586; }
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  @media (max-width: 560px) { .grid { grid-template-columns: repeat(2, 1fr); } }
+  .stat {
+    background: #f4faf6; border: 1px solid #dcefe3; border-radius: 8px; padding: 12px;
+  }
+  .stat .n { font-size: 24px; font-weight: 700; color: #1e7a52; font-variant-numeric: tabular-nums; }
+  .stat .l { font-size: 12.5px; color: #6b7a72; margin-top: 2px; }
+  .stat.hot { background: linear-gradient(135deg, #edf8f0, #f4f6f3); border-color: #58B586; }
+  .stat.hot .n { font-size: 30px; }
+  .help { font-size: 12.5px; color: #7c8a82; line-height: 1.9; margin-top: 12px; }
+  .help li { margin-left: 18px; }
+  .foot { text-align: center; color: #9aa8a0; font-size: 12px; margin-top: 26px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top-bar"></div>
+  <div class="kicker">AI帮我做 · DAY 17</div>
+  <h1>字数统计工具</h1>
+  <p class="sub">投稿按字数收版面费、公文有字数红线、作文卡 800 字——但「字数」到底怎么算，每个口径都不一样。把文字贴进来，五个口径一次算清。浏览器本地计算，不联网、不上传。</p>
+
+  <div class="card">
+    <h2>贴入文字</h2>
+    <textarea id="input" placeholder="把要数的文字贴到这里……">AI帮我做：每天一个小工具。
+Count words, not characters.</textarea>
+  </div>
+
+  <div class="card">
+    <h2>统计结果</h2>
+    <div class="grid">
+      <div class="stat hot"><div class="n" id="nWord">0</div><div class="l">Word「字数」口径</div></div>
+      <div class="stat"><div class="n" id="nTotal">0</div><div class="l">字符数（计空格）</div></div>
+      <div class="stat"><div class="n" id="nChars">0</div><div class="l">字符数（不计空格）</div></div>
+      <div class="stat"><div class="n" id="nCn">0</div><div class="l">中文汉字数</div></div>
+      <div class="stat"><div class="n" id="nEn">0</div><div class="l">英文单词数</div></div>
+      <div class="stat"><div class="n" id="nNums">0</div><div class="l">数字串数</div></div>
+    </div>
+    <ul class="help">
+      <li><b>Word「字数」口径</b>：汉字与中文标点逐字计 1，英文按词计 1，数字串计 1——与 Word 状态栏「字数」一致（12.5 算 1 个，e-mail 算 1 个，a@b.com 算 1 个）。</li>
+      <li>投稿版面费、公文红线常按<b>字符数（计空格/不计空格）</b>，对应第二、三格。</li>
+      <li>「中文汉字数」不含标点；需要纯汉字口径时看这一格。</li>
+      <li>本地计算，关闭页面即忘。</li>
+    </ul>
+  </div>
+
+  <p class="foot">本地计算 · 无网络请求 · AI帮我做 · Day 17</p>
+</div>
+
+<script>
+(function () {
+  // 第二版：Word 口径分词——汉字与中文标点逐字计 1；西文词（连字符/撇号/@/点相连不断开）计 1；数字串（含小数点）计 1
+  function stats(text) {
+    var parts = text.match(/[\u4e00-\u9fff\u3000-\u303f\uff00-\uffef]|[A-Za-z]+(?:[-'@.][A-Za-z0-9]+)*|\d+(?:[.\-]\d+)*/g) || []
+    var s = {
+      total: text.length,
+      noSpace: text.replace(/\s/g, '').length,
+      wordCount: parts.length,
+      cn: 0, cnPunct: 0, en: 0, nums: 0,
+      hanOnly: (text.match(/[\u4e00-\u9fff]/g) || []).length,
+      punctAll: (text.match(/[^\sA-Za-z0-9\u4e00-\u9fff]/g) || []).length
+    }
+    for (var i = 0; i < parts.length; i++) {
+      var p = parts[i]
+      if (/^[\u4e00-\u9fff]$/.test(p)) s.cn++
+      else if (/^[\u3000-\u303f\uff00-\uffef]$/.test(p)) s.cnPunct++
+      else if (/^[A-Za-z]/.test(p)) s.en++
+      else s.nums++
+    }
+    return s
+  }
+
+  function render() {
+    var text = document.getElementById('input').value
+    var s = stats(text)
+    document.getElementById('nTotal').textContent = s.total.toLocaleString('zh-CN')
+    document.getElementById('nChars').textContent = s.noSpace.toLocaleString('zh-CN')
+    document.getElementById('nWord').textContent = s.wordCount.toLocaleString('zh-CN')
+    document.getElementById('nCn').textContent = s.cn.toLocaleString('zh-CN')
+    document.getElementById('nEn').textContent = s.en.toLocaleString('zh-CN')
+    document.getElementById('nNums').textContent = s.nums.toLocaleString('zh-CN')
+    window.__last = { text: text, stats: s }
+  }
+
+  document.getElementById('input').addEventListener('input', render)
+  window.__stats = stats
+  render()
+})();
+</script>
+</body>
+</html>
