@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI帮我做 · 小工具箱 — 每天一个免费在线工具</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", "Segoe UI", sans-serif;
+    background: #f6f8f6; color: #22302a; min-height: 100vh; padding: 40px 16px;
+  }
+  .wrap { max-width: 760px; margin: 0 auto; }
+  .top-bar { height: 6px; background: #58B586; border-radius: 3px; margin-bottom: 28px; }
+  .kicker { color: #58B586; font-weight: 600; font-size: 14px; letter-spacing: 2px; margin-bottom: 8px; }
+  h1 { font-size: 28px; margin-bottom: 6px; }
+  .sub { color: #6b7a72; font-size: 14px; margin-bottom: 28px; line-height: 1.7; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 560px) { .grid { grid-template-columns: 1fr; } }
+  a.tool {
+    display: block; background: #fff; border-radius: 12px; padding: 18px;
+    box-shadow: 0 1px 4px rgba(30, 60, 45, .06); text-decoration: none; color: inherit;
+    border: 1px solid transparent; transition: border-color .15s;
+  }
+  a.tool:hover { border-color: #58B586; }
+  .day { font-size: 12px; color: #58B586; font-weight: 600; letter-spacing: 1px; }
+  .name { font-size: 17px; font-weight: 600; margin: 4px 0 4px; }
+  .desc { font-size: 13px; color: #6b7a72; line-height: 1.6; }
+  .note { margin-top: 24px; font-size: 12.5px; color: #7c8a82; line-height: 1.9; }
+  .foot { text-align: center; color: #9aa8a0; font-size: 12px; margin-top: 26px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top-bar"></div>
+  <div class="kicker">AI帮我做 · DAY 01—17</div>
+  <h1>小工具箱</h1>
+  <p class="sub">每天用 AI 做一个解决真实小问题的工具。全部在浏览器本地运行，不注册、不联网上传、打开即用。</p>
+
+  <div class="grid">
+    <a class="tool" href="tools/day-17-word-counter/">
+      <div class="day">DAY 17</div>
+      <div class="name">字数统计工具</div>
+      <div class="desc">Word「字数」等六个口径一次数清，投稿/公文/作文用。</div>
+    </a>
+    <a class="tool" href="tools/day-16-text-diff/">
+      <div class="day">DAY 16</div>
+      <div class="name">文本对比工具</div>
+      <div class="desc">两版文字逐字标红绿差异，合同改了哪几处一眼看清。</div>
+    </a>
+    <a class="tool" href="tools/day-15-image-to-text/">
+      <div class="day">DAY 15</div>
+      <div class="name">图片转文字</div>
+      <div class="desc">截图里的文字批量识别成可复制文本，本地 OCR 不上传。</div>
+    </a>
+    <a class="tool" href="tools/day-14-ad-word-checker/">
+      <div class="day">DAY 14</div>
+      <div class="name">文案极限词检测器</div>
+      <div class="desc">广告法极限词红字标注，白名单防误伤，发布前自查。</div>
+    </a>
+    <a class="tool" href="tools/day-13-photo-privacy-cleaner/">
+      <div class="day">DAY 13</div>
+      <div class="name">照片隐私清理器</div>
+      <div class="desc">批量擦除照片 EXIF/GPS 位置信息，发朋友圈前先洗一遍。</div>
+    </a>
+    <a class="tool" href="tools/day-12-qr-batch-generator/">
+      <div class="day">DAY 12</div>
+      <div class="name">二维码批量生成器</div>
+      <div class="desc">一行一条批量生成二维码，几十张一次打包下载。</div>
+    </a>
+    <a class="tool" href="tools/day-11-math-worksheet/">
+      <div class="day">DAY 11</div>
+      <div class="name">口算题生成器</div>
+      <div class="desc">分难度出题、约束保证、可打印含答案页，每天一套。</div>
+    </a>
+    <a class="tool" href="tools/day-10-pdf-merger/">
+      <div class="day">DAY 10</div>
+      <div class="name">PDF 合并器</div>
+      <div class="desc">报价单、合同、图纸合成一个 PDF，浏览器本地完成。</div>
+    </a>
+    <a class="tool" href="tools/day-09-comment-classifier/">
+      <div class="day">DAY 09</div>
+      <div class="name">评论归类器</div>
+      <div class="desc">把评论按事实/建议/情绪拆分归堆，原话可回查（本地运行脚本）。</div>
+    </a>
+    <a class="tool" href="tools/day-08-doc-format-checker/">
+      <div class="day">DAY 08</div>
+      <div class="name">文档格式体检器</div>
+      <div class="desc">标书/论文格式核对：字体字号行距页边距，三状态报告（Agent Skill）。</div>
+    </a>
+    <a class="tool" href="tools/day-04-client-follow-up/">
+      <div class="day">DAY 04</div>
+      <div class="name">客户跟进助手</div>
+      <div class="desc">客户排序、跟进建议、话术草稿，CSV 导入导出。</div>
+    </a>
+    <a class="tool" href="tools/day-03-excel-deduplicator/">
+      <div class="day">DAY 03</div>
+      <div class="name">Excel 重复数据清理</div>
+      <div class="desc">多规则查重、预览确认、清理后导出副本。</div>
+    </a>
+    <a class="tool" href="tools/day-02-batch-renamer/">
+      <div class="day">DAY 02</div>
+      <div class="name">批量文件重命名</div>
+      <div class="desc">命名规则实时预览、排序，打包下载改名副本。</div>
+    </a>
+    <a class="tool" href="tools/day-01-image-compressor/">
+      <div class="day">DAY 01</div>
+      <div class="name">图片批量压缩器</div>
+      <div class="desc">本地批量压缩、压缩前后体积对比、ZIP 打包下载。</div>
+    </a>
+  </div>
+
+  <p class="note">Day 05–07（客服话术库、会议行动项、周报整理）为对话式工具，源码随公众号文章发布，未做网页版。<br>全部源码：<a href="https://gitee.com/ysjsgzq/ai-small-tools">gitee.com/ysjsgzq/ai-small-tools</a> · 公众号「AI帮我做」每天更新。</p>
+
+  <p class="foot">本地运行 · 无网络请求 · AI帮我做</p>
+</div>
+</body>
+</html>
