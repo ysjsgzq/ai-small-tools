@@ -21,6 +21,7 @@
 | Day 16 | 文本对比工具 | 两级 LCS 逐字标差异、行号定位、差异清单可复制 | [`tools/day-16-text-diff/`](tools/day-16-text-diff/) |
 | Day 17 | 字数统计工具 | Word 口径分词、六口径一次算清、投稿/公文/作文场景 | [`tools/day-17-word-counter/`](tools/day-17-word-counter/) |
 | Day 18 | 古诗默写卷生成器 | 79 首小学必背、搜索选诗、三档难度锚点保护、答案页可打印 | [`tools/day-18-poem-dictation/`](tools/day-18-poem-dictation/) |
+| Day 19 | 字帖生成器 | 田字格描红、拼音四线三格教学占格、字母数字成对、A4 打印 | [`tools/day-19-copybook-generator/`](tools/day-19-copybook-generator/) |
 
 ## 仓库结构
 
@@ -90,7 +91,10 @@
     ├── day-17-word-counter/
     │   ├── README.md
     │   └── index.html
-    └── day-18-poem-dictation/
+    ├── day-18-poem-dictation/
+    │   ├── README.md
+    │   └── index.html
+    └── day-19-copybook-generator/
         ├── README.md
         └── index.html
 ```

@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>字帖生成器 · 田字格描红+拼音四线三格，免费打印</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", "Segoe UI", sans-serif;
+    background: #f6f8f6; color: #22302a; min-height: 100vh; padding: 40px 16px;
+  }
+  .wrap { max-width: 820px; margin: 0 auto; }
+  .top-bar { height: 6px; background: #58B586; border-radius: 3px; margin-bottom: 28px; }
+  .kicker { color: #58B586; font-weight: 600; font-size: 14px; letter-spacing: 2px; margin-bottom: 8px; }
+  h1 { font-size: 28px; margin-bottom: 6px; }
+  .sub { color: #6b7a72; font-size: 14px; margin-bottom: 24px; line-height: 1.7; }
+  .card {
+    background: #fff; border-radius: 12px; padding: 22px;
+    box-shadow: 0 1px 4px rgba(30, 60, 45, .06); margin-bottom: 16px;
+  }
+  .card h2 { font-size: 15px; color: #46564e; margin-bottom: 12px; }
+  textarea {
+    width: 100%; min-height: 70px; font-size: 15px; line-height: 1.8; padding: 12px;
+    border: 1px solid #d8e2dc; border-radius: 8px; outline: none; background: #fbfdfb;
+    font-family: inherit; resize: vertical;
+  }
+  textarea:focus { border-color: #58B586; }
+  .row { display: flex; flex-wrap: wrap; gap: 12px; margin: 12px 0; align-items: center; }
+  select, button, input[type=text] {
+    font-family: inherit; font-size: 15px; padding: 8px 14px; border: 1px solid #d8e2dc;
+    border-radius: 8px; outline: none; background: #fff; cursor: pointer;
+  }
+  button.primary { background: #58B586; color: #fff; border: none; }
+  button.primary:hover { background: #4aa377; }
+  label.inline { font-size: 14px; color: #46564e; display: inline-flex; align-items: center; gap: 6px; }
+  label.inline input { accent-color: #58B586; }
+  .mode-tabs { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+  .mode-tabs button {
+    border: 1px solid #d8e2dc; border-radius: 20px; padding: 7px 18px; background: #fff;
+    font-size: 14px; cursor: pointer;
+  }
+  .mode-tabs button.on { background: #58B586; color: #fff; border-color: #58B586; }
+
+  /* ===== 字帖纸张 ===== */
+  .sheet { background: #fff; border: 1px solid #e2e9e4; border-radius: 12px; padding: 32px 24px; margin-bottom: 16px; overflow: auto; }
+  .sheet-title { text-align: center; font-size: 16px; font-weight: 600; color: #46564e; margin-bottom: 18px; }
+
+  /* 田字格 */
+  .tian-row { display: flex; justify-content: center; margin-bottom: 4px; }
+  .tian {
+    width: var(--cell, 64px); height: var(--cell, 64px);
+    border: 1.5px solid #9aa8a0; position: relative; margin-right: -1.5px; margin-bottom: -1.5px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .tian::before, .tian::after {
+    content: ''; position: absolute; background: repeating-linear-gradient(90deg, #c6d2cb 0 4px, transparent 4px 8px);
+  }
+  .tian::before { left: 0; right: 0; top: 50%; height: 1px; transform: translateY(-50%); }
+  .tian::after { top: 0; bottom: 0; left: 50%; width: 1px; transform: translateX(-50%);
+    background: repeating-linear-gradient(180deg, #c6d2cb 0 4px, transparent 4px 8px); }
+  .tian .zi {
+    font-family: "Kaiti SC", "STKaiti", KaiTi, 楷体, serif;
+    font-size: calc(var(--cell, 64px) * 0.72); line-height: 1; z-index: 1;
+  }
+  .tian .zi.demo { color: #2c3e33; }
+  .tian .zi.trace { color: #ccd6d0; }
+
+  /* 拼音四线三格（v2） */
+  .pinyin-row { display: flex; flex-wrap: wrap; gap: 12px 14px; justify-content: center; margin-bottom: 16px; }
+  .py-word {
+    height: calc(var(--grid, 26px) * 4); min-width: calc(var(--grid, 26px) * 1.8);
+    position: relative; display: inline-flex; align-items: center; justify-content: center;
+    padding: 0 calc(var(--grid, 26px) * 0.3);
+  }
+  .py-lines { position: absolute; inset: 0; }
+  .py-lines i { position: absolute; left: 0; right: 0; height: 1.5px; background: #9aa8a0; }
+  .py-lines i:nth-child(1) { top: 0; }
+  .py-lines i:nth-child(2) { top: var(--grid, 26px); background: #c6d2cb; }
+  .py-lines i:nth-child(3) { top: calc(var(--grid, 26px) * 2); background: #c6d2cb; }
+  .py-lines i:nth-child(4) { top: calc(var(--grid, 26px) * 3); }
+  .py-text {
+    position: relative; font-family: "Kaiti SC", "STKaiti", KaiTi, serif;
+    line-height: calc(var(--grid, 26px) * 4); letter-spacing: 0.02em; white-space: nowrap;
+  }
+  .bp { display: inline-block; width: 0; height: 0; }
+  .py-ch { color: #2c3e33; }
+  .py-ch.demo { color: #2c3e33; }
+  .py-ch.trace { color: #ccd6d0; }
+
+  .notes { font-size: 12.5px; color: #7c8a82; line-height: 1.9; }
+  .notes li { margin-left: 18px; }
+  .foot { text-align: center; color: #9aa8a0; font-size: 12px; margin-top: 26px; }
+
+  @media print {
+    body { background: #fff; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .no-print { display: none !important; }
+    .wrap { max-width: none; }
+    .sheet { border: none; padding: 0; page-break-inside: avoid; }
+    @page { size: A4 portrait; margin: 12mm; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top-bar no-print"></div>
+  <div class="kicker no-print">AI帮我做 · DAY 19</div>
+  <h1 class="no-print">字帖生成器</h1>
+  <p class="sub no-print">输入生字自动排田字格描红字帖；拼音按四线三格排布，字母占格符合教学规范。调好点打印，A4 直接出帖。浏览器本地生成，不联网、不上传。</p>
+
+  <div class="card no-print">
+    <h2>字帖设置</h2>
+    <div class="mode-tabs" id="modeTabs">
+      <button data-mode="hanzi" class="on">田字格生字</button>
+      <button data-mode="pinyin">拼音四线三格</button>
+      <button data-mode="letter">字母 / 数字</button>
+    </div>
+    <div id="hanziPanel">
+      <textarea id="hanziInput" placeholder="输入要练的生字，一行一个或直接连打，重复输入自动去重">日月水火山石田土</textarea>
+      <div class="row">
+        <label class="inline">每行 <input type="number" id="perRow" value="8" min="3" max="14" style="width:64px"> 格</label>
+        <label class="inline">格宽 <input type="number" id="cellSize" value="64" min="40" max="90" style="width:64px"> px</label>
+        <label class="inline"><input type="checkbox" id="dedupe" checked> 自动去重</label>
+      </div>
+      <div class="row">
+        <label class="inline"><input type="radio" name="hmode" value="demo1" checked> 每行首字示范</label>
+        <label class="inline"><input type="radio" name="hmode" value="alltrace"> 全部描红</label>
+        <label class="inline"><input type="radio" name="hmode" value="blank"> 只出空格</label>
+      </div>
+    </div>
+    <div id="pinyinPanel" style="display:none">
+      <div class="row">
+        <button data-set="shengmu" class="preset">声母表（23）</button>
+        <button data-set="yunmu" class="preset">韵母表（24）</button>
+        <button data-set="zhengti" class="preset">整体认读（16）</button>
+      </div>
+      <textarea id="pinyinInput" placeholder="或输入自定义拼音串">b p m f d t n l</textarea>
+      <div class="row">
+        <label class="inline">格高 <input type="number" id="gridSize" value="26" min="16" max="40" style="width:64px"> px</label>
+        <label class="inline"><input type="radio" name="pmode" value="demo1" checked> 首个示范</label>
+        <label class="inline"><input type="radio" name="pmode" value="alltrace"> 全部描红</label>
+      </div>
+    </div>
+    <div id="letterPanel" style="display:none">
+      <div class="row">
+        <button data-lset="upper" class="preset">大写 A-Z</button>
+        <button data-lset="lower" class="preset">小写 a-z</button>
+        <button data-lset="pair" class="preset">大小写成对</button>
+        <button data-lset="digit" class="preset">数字 0-9</button>
+      </div>
+      <textarea id="letterInput" placeholder="或输入自定义字母数字">Aa Bb Cc</textarea>
+      <div class="row">
+        <label class="inline">格高 <input type="number" id="gridSize2" value="26" min="16" max="40" style="width:64px"> px</label>
+        <label class="inline"><input type="radio" name="lmode" value="demo1" checked> 首个示范</label>
+        <label class="inline"><input type="radio" name="lmode" value="alltrace"> 全部描红</label>
+      </div>
+    </div>
+    <div class="row">
+      <button class="primary" id="printBtn">打印 / 保存 PDF</button>
+    </div>
+  </div>
+
+  <div class="sheet" id="sheet"></div>
+
+  <div class="card no-print">
+    <h2>规则与边界</h2>
+    <ul class="notes">
+      <li>田字格：楷体（用系统自带楷体栈），每行首字深色示范、其余浅灰描红，虚线十字辅助定位。</li>
+      <li>拼音四线三格：字母按教学规范占格——<b>占上中格</b>：b p f d t l h k；<b>占中格</b>：a o e i u ü c m n r s v w x y z；<b>占中下格</b>：g q y；<b>占上中下三格</b>：j。</li>
+      <li>打印时自动隐藏设置区，A4 纵向；若浏览器打印预览里虚线消失，请在打印设置里勾选「背景图形」。</li>
+      <li>控笔练习（线条图形训练）不在本工具范围内——那需要美术设计，不是排版能解决的。</li>
+      <li>本地生成，关闭页面即忘。</li>
+    </ul>
+  </div>
+
+  <p class="foot no-print">本地生成 · 无网络请求 · AI帮我做 · Day 19</p>
+</div>
+
+<script>
+(function () {
+  var SHENGMU = 'b p m f d t n l g k h j q x zh ch sh r z c s y w'.split(' ')
+  var YUNMU = 'a o e i u ü ai ei ui ao ou iu ie üe er an en in un ün ang eng ing ong'.split(' ')
+  var ZHENGTI = 'zhi chi shi ri zi ci si yi wu yu ye yue yuan yin yun ying'.split(' ')
+
+  // 第一版：字母统一按中格渲染（占格映射待修）
+  function render() {
+    var mode = document.querySelector('#modeTabs button.on').dataset.mode
+    var sheet = document.getElementById('sheet')
+    if (mode === 'hanzi') return renderHanzi(sheet)
+    if (mode === 'pinyin') return renderPinyin(sheet, document.getElementById('pinyinInput').value.trim().split(/\s+/), document.querySelector('input[name=pmode]:checked').value, +document.getElementById('gridSize').value)
+    var txt = document.getElementById('letterInput').value.trim()
+    var items = txt.indexOf(' ') >= 0 ? txt.split(/\s+/) : txt ? txt.split('') : []
+    return renderPinyin(sheet, items, document.querySelector('input[name=lmode]:checked').value, +document.getElementById('gridSize2').value)
+  }
+
+  function renderHanzi(sheet) {
+    var raw = document.getElementById('hanziInput').value.replace(/\s+/g, '')
+    var chars = Array.from(raw)
+    if (document.getElementById('dedupe').checked) {
+      var seen = {}; chars = chars.filter(function (c) { if (!seen[c]) { seen[c] = 1; return true } return false })
+    }
+    var perRow = Math.max(3, Math.min(14, +document.getElementById('perRow').value || 8))
+    var cell = Math.max(40, Math.min(90, +document.getElementById('cellSize').value || 64))
+    var hmode = document.querySelector('input[name=hmode]:checked').value
+    var html = '<div class="sheet-title">生字练习 · 共 ' + chars.length + ' 字</div>'
+    for (var i = 0; i < chars.length; i += perRow) {
+      html += '<div class="tian-row" style="--cell:' + cell + 'px">'
+      for (var j = i; j < i + perRow && j < chars.length; j++) {
+        var cls = hmode === 'alltrace' ? 'trace' : (hmode === 'blank' ? '' : (j % perRow === 0 ? 'demo' : 'trace'))
+        html += '<div class="tian">' + (hmode === 'blank' ? '' : '<span class="zi ' + cls + '">' + chars[j] + '</span>') + '</div>'
+      }
+      html += '</div>'
+    }
+    sheet.innerHTML = html
+    window.__last = { mode: 'hanzi', chars: chars, perRow: perRow, rows: Math.ceil(chars.length / perRow), hmode: hmode }
+  }
+
+  // 第二版：字母按字体学占格——统一字号 + baseline 对齐第 3 线，升部（b d l…）自然入上格、降部（g q y…）自然入下格
+  var DESC = { g: 1, q: 1, y: 1, j: 1, p: 1 }
+  function renderPinyin(sheet, items, pmode, grid) {
+    grid = Math.max(16, Math.min(40, grid || 26))
+    var html = '<div class="sheet-title">拼音 / 字母练习 · 共 ' + items.length + ' 个</div><div class="pinyin-row" style="--grid:' + grid + 'px">'
+    for (var i = 0; i < items.length; i++) {
+      var cls = pmode === 'alltrace' ? 'trace' : (i === 0 ? 'demo' : 'trace')
+      var chars = Array.from(items[i])
+      var spans = chars.map(function (c) {
+        return '<span class="py-ch ' + cls + (DESC[c] ? ' py-desc' : '') + '">' + c + '</span>'
+      }).join('')
+      html += '<div class="py-word" style="--grid:' + grid + 'px">' +
+        '<span class="py-lines"><i></i><i></i><i></i><i></i></span>' +
+        '<span class="py-text" style="font-size:' + (grid * 1.9) + 'px">' + spans + '<span class="bp"></span></span></div>'
+    }
+    html += '</div>'
+    sheet.innerHTML = html
+    calibrateBaseline()
+    window.__last = { mode: 'pinyin', items: items, pmode: pmode, grid: grid }
+  }
+
+  // 第三版校准：CSS 行盒的 baseline 位置无法解析计算——渲染后用零宽探针实测，整体平移到第 3 线
+  function calibrateBaseline() {
+    document.querySelectorAll('.py-word').forEach(function (w) {
+      var text = w.querySelector('.py-text')
+      var probe = w.querySelector('.bp')
+      var grid = parseFloat(getComputedStyle(w).getPropertyValue('--grid')) || 26
+      var baseline = probe.getBoundingClientRect().top - w.getBoundingClientRect().top
+      var target = grid * 2
+      var dy = target - baseline
+      text.style.top = dy + 'px'
+    })
+  }
+
+  // 事件绑定
+  document.querySelectorAll('#modeTabs button').forEach(function (b) {
+    b.addEventListener('click', function () {
+      document.querySelectorAll('#modeTabs button').forEach(function (x) { x.classList.remove('on') })
+      b.classList.add('on')
+      document.getElementById('hanziPanel').style.display = b.dataset.mode === 'hanzi' ? '' : 'none'
+      document.getElementById('pinyinPanel').style.display = b.dataset.mode === 'pinyin' ? '' : 'none'
+      document.getElementById('letterPanel').style.display = b.dataset.mode === 'letter' ? '' : 'none'
+      render()
+    })
+  })
+  document.querySelectorAll('.preset').forEach(function (b) {
+    b.addEventListener('click', function () {
+      var t = b.dataset.set
+      if (t === 'shengmu') document.getElementById('pinyinInput').value = SHENGMU.join(' ')
+      if (t === 'yunmu') document.getElementById('pinyinInput').value = YUNMU.join(' ')
+      if (t === 'zhengti') document.getElementById('pinyinInput').value = ZHENGTI.join(' ')
+      render()
+    })
+  })
+  document.querySelectorAll('[data-lset]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      var t = b.dataset.lset, up = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', lo = 'abcdefghijklmnopqrstuvwxyz'
+      if (t === 'upper') document.getElementById('letterInput').value = up.split('').join(' ')
+      if (t === 'lower') document.getElementById('letterInput').value = lo.split('').join(' ')
+      if (t === 'pair') document.getElementById('letterInput').value = up.split('').map(function (c, i) { return c + lo[i] }).join(' ')
+      if (t === 'digit') document.getElementById('letterInput').value = '0123456789'.split('').join(' ')
+      render()
+    })
+  })
+  ;['hanziInput', 'perRow', 'cellSize', 'dedupe', 'pinyinInput', 'gridSize', 'letterInput', 'gridSize2'].forEach(function (id) {
+    document.getElementById(id).addEventListener('input', render)
+    document.getElementById(id).addEventListener('change', render)
+  })
+  document.querySelectorAll('input[name=hmode],input[name=pmode],input[name=lmode]').forEach(function (r) { r.addEventListener('change', render) })
+  document.getElementById('printBtn').addEventListener('click', function () { window.print() })
+  window.__SETS = { SHENGMU: SHENGMU, YUNMU: YUNMU, ZHENGTI: ZHENGTI }
+  render()
+})();
+</script>
+</body>
+</html>
