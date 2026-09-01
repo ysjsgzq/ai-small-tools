@@ -300,7 +300,7 @@
     var cell = SP('cellMM', [10, 20, 14])
     var availW = PAGE_W - PAD_X * 2
     if ($('plainMode').checked) return Math.max(1, Math.floor(availW / cell))
-    return Math.max(1, Math.floor((availW + 4) / ((1 + S.traceN + S.blankN) * cell + 4)))
+    return Math.max(1, Math.floor((availW + 4) / (2 * cell + 4)))
   }
   function refreshPerRowChips() {
     var auto = autoPerRow()
@@ -312,6 +312,7 @@
     box.querySelectorAll('.chip').forEach(function (c) {
       c.addEventListener('click', function () {
         S.perRow = parseInt(c.dataset.pr, 10)
+        $('traceNVal').textContent = S.perRow > 0 ? '\u81ea\u52a8' : S.traceN
         refreshPerRowChips(); render()
       })
     })
@@ -340,8 +341,18 @@
     var rows = [], rowH = cell + rowGap, groupsPerRow = 0
 
     if (hmode === 'group') {
-      var groupCells = 1 + traceN + blankN
-      groupsPerRow = S.perRow > 0 ? Math.min(S.perRow, Math.max(1, Math.floor((availW + 4) / (groupCells * cell + 4)))) : Math.max(1, Math.floor((availW + 4) / (groupCells * cell + 4)))
+      var groupCells, effTraceN
+      if (S.perRow > 0) {
+        // 手动指定每行字数：整行宽分给 n 个字，描红格自动补满，不留右侧空白
+        groupsPerRow = S.perRow
+        groupCells = Math.floor((availW - (groupsPerRow - 1) * 4) / groupsPerRow / cell)
+        effTraceN = Math.max(1, groupCells - 1 - blankN)
+      } else {
+        groupCells = 1 + traceN + blankN
+        effTraceN = traceN
+        groupsPerRow = Math.max(1, Math.floor((availW + 4) / (groupCells * cell + 4)))
+      }
+      traceN = effTraceN
       for (var i = 0; i < chars.length; i += groupsPerRow) {
         var html = '<div class="tian-groups" style="--cell:' + cell + 'mm;--rowgap:' + rowGap + 'mm">'
         for (var g = i; g < i + groupsPerRow && g < chars.length; g++) {
@@ -364,7 +375,7 @@
       }
     }
     var meta = renderPages(papers, '生字练习 · 共 ' + chars.length + ' 字', rows, rowH)
-    $('pageHint').textContent = chars.length + ' 字 · ' + groupsPerRow + ' 组/行 · 每页 ' + meta.rowsPerPage + ' 行 · 共 ' + meta.pages + ' 页 A4'
+    $('pageHint').textContent = chars.length + ' 字 · 每行 ' + groupsPerRow + ' 字（每字 1 示范 + ' + traceN + ' 描红 + ' + blankN + ' 空格）· 共 ' + meta.pages + ' 页 A4'
     window.__last = { mode: 'hanzi', chars: chars, cell: cell, traceN: traceN, blankN: blankN, hmode: hmode, pages: meta.pages, groupsPerRow: groupsPerRow, rows: rows.length }
   }
 
