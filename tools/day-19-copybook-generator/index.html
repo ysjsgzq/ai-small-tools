@@ -120,10 +120,12 @@
 
   /* ===== A4 纸张（mm 排版） ===== */
   .paper {
-    width: 210mm; min-height: 297mm; background: #fff; margin: 0 auto 18px;
+    width: 210mm; height: 297mm; background: #fff; margin: 0 auto 18px;
     box-shadow: 0 1px 3px rgba(31,45,38,.12), 0 12px 40px rgba(31,45,38,.14); border-radius: 3px;
     padding: 14mm 12mm 12mm; position: relative; overflow: hidden;
+    display: flex; flex-direction: column;
   }
+  .page-fill { flex: 1; display: flex; flex-direction: column; justify-content: space-evenly; }
   .paper .pageno { position: absolute; bottom: 5mm; left: 0; right: 0; text-align: center; font-size: 9px; color: #b6c1ba; }
   /* 田字格 */
   .tian-groups { display: flex; flex-wrap: wrap; justify-content: space-between; row-gap: var(--rowgap, 3mm); }
@@ -285,7 +287,8 @@
     var html = ''
     pages.forEach(function (pg, pi) {
       html += '<div class="paper">' +
-        '<div class="sheet-title">' + title + (pages.length > 1 ? '（' + (pi + 1) + '/' + pages.length + '）' : '') + '</div>' + pg.join('') +
+        '<div class="sheet-title">' + title + (pages.length > 1 ? '（' + (pi + 1) + '/' + pages.length + '）' : '') + '</div>' +
+        '<div class="page-fill">' + pg.join('') + '</div>' +
         '<div class="pageno">第 ' + (pi + 1) + ' 页 / 共 ' + pages.length + ' 页</div></div>'
     })
     papersEl.innerHTML = html
