@@ -3,101 +3,95 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>字帖生成器 · 田字格描红+拼音四线三格，免费打印</title>
+<title>字帖生成器 · A4 所见即所得，田字格描红+拼音四线三格</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
     font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", "Segoe UI", sans-serif;
-    background: #f6f8f6; color: #22302a; min-height: 100vh; padding: 40px 16px;
+    background: #eef2ef; color: #22302a; min-height: 100vh; padding: 30px 8px;
   }
-  .wrap { max-width: 820px; margin: 0 auto; }
-  .top-bar { height: 6px; background: #58B586; border-radius: 3px; margin-bottom: 28px; }
+  .wrap { max-width: 900px; margin: 0 auto; }
+  .top-bar { height: 6px; background: #58B586; border-radius: 3px; margin-bottom: 22px; }
   .kicker { color: #58B586; font-weight: 600; font-size: 14px; letter-spacing: 2px; margin-bottom: 8px; }
-  h1 { font-size: 28px; margin-bottom: 6px; }
-  .sub { color: #6b7a72; font-size: 14px; margin-bottom: 24px; line-height: 1.7; }
+  h1 { font-size: 26px; margin-bottom: 6px; }
+  .sub { color: #6b7a72; font-size: 14px; margin-bottom: 20px; line-height: 1.7; }
   .card {
-    background: #fff; border-radius: 12px; padding: 22px;
+    background: #fff; border-radius: 12px; padding: 20px;
     box-shadow: 0 1px 4px rgba(30, 60, 45, .06); margin-bottom: 16px;
   }
   .card h2 { font-size: 15px; color: #46564e; margin-bottom: 12px; }
-  textarea {
-    width: 100%; min-height: 70px; font-size: 15px; line-height: 1.8; padding: 12px;
-    border: 1px solid #d8e2dc; border-radius: 8px; outline: none; background: #fbfdfb;
-    font-family: inherit; resize: vertical;
+  select, button, textarea, input[type=text], input[type=number] {
+    font-family: inherit; font-size: 15px; padding: 8px 12px; border: 1px solid #d8e2dc;
+    border-radius: 8px; outline: none; background: #fff;
   }
-  textarea:focus { border-color: #58B586; }
-  .row { display: flex; flex-wrap: wrap; gap: 12px; margin: 12px 0; align-items: center; }
-  select, button, input[type=text] {
-    font-family: inherit; font-size: 15px; padding: 8px 14px; border: 1px solid #d8e2dc;
-    border-radius: 8px; outline: none; background: #fff; cursor: pointer;
-  }
-  button.primary { background: #58B586; color: #fff; border: none; }
+  textarea { width: 100%; min-height: 60px; line-height: 1.8; resize: vertical; }
+  button.primary { background: #58B586; color: #fff; border: none; cursor: pointer; }
   button.primary:hover { background: #4aa377; }
-  label.inline { font-size: 14px; color: #46564e; display: inline-flex; align-items: center; gap: 6px; }
-  label.inline input { accent-color: #58B586; }
-  .mode-tabs { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
-  .mode-tabs button {
-    border: 1px solid #d8e2dc; border-radius: 20px; padding: 7px 18px; background: #fff;
-    font-size: 14px; cursor: pointer;
-  }
+  .preset { cursor: pointer; }
+  .row { display: flex; flex-wrap: wrap; gap: 10px 14px; margin: 10px 0; align-items: center; }
+  label.inline { font-size: 14px; color: #46564e; display: inline-flex; align-items: center; gap: 5px; }
+  label.inline input[type=number] { width: 58px; }
+  label.inline input[type=checkbox], label.inline input[type=radio] { accent-color: #58B586; }
+  .mode-tabs { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+  .mode-tabs button { border: 1px solid #d8e2dc; border-radius: 20px; padding: 6px 16px; background: #fff; font-size: 14px; cursor: pointer; }
   .mode-tabs button.on { background: #58B586; color: #fff; border-color: #58B586; }
 
-  /* ===== 字帖纸张 ===== */
-  .sheet { background: #fff; border: 1px solid #e2e9e4; border-radius: 12px; padding: 32px 24px; margin-bottom: 16px; overflow: auto; }
-  .sheet-title { text-align: center; font-size: 16px; font-weight: 600; color: #46564e; margin-bottom: 18px; }
+  /* ===== A4 纸张（mm 排版，所见即所得） ===== */
+  .paper {
+    width: 210mm; min-height: 297mm; background: #fff; margin: 0 auto 18px;
+    box-shadow: 0 2px 14px rgba(30, 60, 45, .16); border-radius: 2px;
+    padding: var(--pmt, 14mm) 12mm 12mm;
+    position: relative; overflow: hidden;
+  }
+  .paper .pageno { position: absolute; bottom: 5mm; left: 0; right: 0; text-align: center; font-size: 9px; color: #b6c1ba; }
 
-  /* 田字格 */
-  .tian-row { display: flex; justify-content: center; margin-bottom: 4px; }
+  /* 田字格（mm） */
+  .tian-groups { display: flex; flex-wrap: wrap; justify-content: space-between; row-gap: var(--rowgap, 3mm); }
+  .tian-group { display: flex; }
   .tian {
-    width: var(--cell, 64px); height: var(--cell, 64px);
-    border: 1.5px solid #9aa8a0; position: relative; margin-right: -1.5px; margin-bottom: -1.5px;
+    width: var(--cell, 14mm); height: var(--cell, 14mm);
+    border: 0.45mm solid #8fa198; position: relative; margin-right: -0.45mm; margin-bottom: -0.45mm;
     display: flex; align-items: center; justify-content: center;
   }
-  .tian::before, .tian::after {
-    content: ''; position: absolute; background: repeating-linear-gradient(90deg, #c6d2cb 0 4px, transparent 4px 8px);
-  }
-  .tian::before { left: 0; right: 0; top: 50%; height: 1px; transform: translateY(-50%); }
-  .tian::after { top: 0; bottom: 0; left: 50%; width: 1px; transform: translateX(-50%);
-    background: repeating-linear-gradient(180deg, #c6d2cb 0 4px, transparent 4px 8px); }
-  .tian .zi {
-    font-family: "Kaiti SC", "STKaiti", KaiTi, 楷体, serif;
-    font-size: calc(var(--cell, 64px) * 0.72); line-height: 1; z-index: 1;
-  }
-  .tian .zi.demo { color: #2c3e33; }
-  .tian .zi.trace { color: #ccd6d0; }
+  .tian:last-child { margin-right: 0; }
+  .tian::before, .tian::after { content: ''; position: absolute; }
+  .tian::before { left: 0; right: 0; top: 50%; height: 0.3mm; transform: translateY(-50%);
+    background: repeating-linear-gradient(90deg, #c2cec7 0 1.2mm, transparent 1.2mm 2.2mm); }
+  .tian::after { top: 0; bottom: 0; left: 50%; width: 0.3mm; transform: translateX(-50%);
+    background: repeating-linear-gradient(180deg, #c2cec7 0 1.2mm, transparent 1.2mm 2.2mm); }
+  .tian .zi { font-family: "Kaiti SC", "STKaiti", KaiTi, 楷体, serif; font-size: calc(var(--cell, 14mm) * 0.72); line-height: 1; z-index: 1; }
+  .zi.demo { color: #2c3e33; }
+  .zi.trace { color: #ccd6d0; }
 
-  /* 拼音四线三格（v2） */
-  .pinyin-row { display: flex; flex-wrap: wrap; gap: 12px 14px; justify-content: center; margin-bottom: 16px; }
-  .py-word {
-    height: calc(var(--grid, 26px) * 4); min-width: calc(var(--grid, 26px) * 1.8);
+  /* 拼音四线三格（mm） */
+  .py-rows { display: flex; flex-wrap: wrap; justify-content: flex-start; column-gap: 5mm; row-gap: var(--rowgap, 3mm); }
+  .py-word { height: calc(var(--grid, 7mm) * 4); min-width: calc(var(--grid, 7mm) * 1.8);
     position: relative; display: inline-flex; align-items: center; justify-content: center;
-    padding: 0 calc(var(--grid, 26px) * 0.3);
-  }
+    padding: 0 calc(var(--grid, 7mm) * 0.25); }
   .py-lines { position: absolute; inset: 0; }
-  .py-lines i { position: absolute; left: 0; right: 0; height: 1.5px; background: #9aa8a0; }
+  .py-lines i { position: absolute; left: 0; right: 0; height: 0.35mm; background: #8fa198; }
   .py-lines i:nth-child(1) { top: 0; }
-  .py-lines i:nth-child(2) { top: var(--grid, 26px); background: #c6d2cb; }
-  .py-lines i:nth-child(3) { top: calc(var(--grid, 26px) * 2); background: #c6d2cb; }
-  .py-lines i:nth-child(4) { top: calc(var(--grid, 26px) * 3); }
-  .py-text {
-    position: relative; font-family: "Kaiti SC", "STKaiti", KaiTi, serif;
-    line-height: calc(var(--grid, 26px) * 4); letter-spacing: 0.02em; white-space: nowrap;
-  }
-  .bp { display: inline-block; width: 0; height: 0; }
+  .py-lines i:nth-child(2) { top: var(--grid, 7mm); background: #c2cec7; }
+  .py-lines i:nth-child(3) { top: calc(var(--grid, 7mm) * 2); background: #c2cec7; }
+  .py-lines i:nth-child(4) { top: calc(var(--grid, 7mm) * 3); }
+  .py-text { position: relative; font-family: "Kaiti SC", "STKaiti", KaiTi, serif; line-height: calc(var(--grid, 7mm) * 4); white-space: nowrap; }
   .py-ch { color: #2c3e33; }
   .py-ch.demo { color: #2c3e33; }
   .py-ch.trace { color: #ccd6d0; }
+  .bp { display: inline-block; width: 0; height: 0; }
 
+  .sheet-title { text-align: center; font-size: 5mm; color: #6b7a72; margin-bottom: 6mm; letter-spacing: 1mm; }
   .notes { font-size: 12.5px; color: #7c8a82; line-height: 1.9; }
   .notes li { margin-left: 18px; }
-  .foot { text-align: center; color: #9aa8a0; font-size: 12px; margin-top: 26px; }
+  .foot { text-align: center; color: #9aa8a0; font-size: 12px; margin-top: 24px; }
 
   @media print {
     body { background: #fff; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     .no-print { display: none !important; }
     .wrap { max-width: none; }
-    .sheet { border: none; padding: 0; page-break-inside: avoid; }
-    @page { size: A4 portrait; margin: 12mm; }
+    .paper { box-shadow: none; margin: 0; border-radius: 0; page-break-after: always; break-after: page; }
+    .paper:last-of-type { page-break-after: auto; break-after: auto; }
+    @page { size: A4 portrait; margin: 0; }
   }
 </style>
 </head>
@@ -106,7 +100,7 @@
   <div class="top-bar no-print"></div>
   <div class="kicker no-print">AI帮我做 · DAY 19</div>
   <h1 class="no-print">字帖生成器</h1>
-  <p class="sub no-print">输入生字自动排田字格描红字帖；拼音按四线三格排布，字母占格符合教学规范。调好点打印，A4 直接出帖。浏览器本地生成，不联网、不上传。</p>
+  <p class="sub no-print">按 A4 纸实际尺寸所见即所得：屏幕上什么样，打印出来就什么样。田字格描红、拼音四线三格（教学占格）、字母数字，毫米级参数，字多自动分页。浏览器本地生成，不联网、不上传。</p>
 
   <div class="card no-print">
     <h2>字帖设置</h2>
@@ -116,16 +110,17 @@
       <button data-mode="letter">字母 / 数字</button>
     </div>
     <div id="hanziPanel">
-      <textarea id="hanziInput" placeholder="输入要练的生字，一行一个或直接连打，重复输入自动去重">日月水火山石田土</textarea>
+      <textarea id="hanziInput" placeholder="输入要练的生字，重复自动去重">日月水火山石田木禾</textarea>
       <div class="row">
-        <label class="inline">每行 <input type="number" id="perRow" value="8" min="3" max="14" style="width:64px"> 格</label>
-        <label class="inline">格宽 <input type="number" id="cellSize" value="64" min="40" max="90" style="width:64px"> px</label>
-        <label class="inline"><input type="checkbox" id="dedupe" checked> 自动去重</label>
+        <label class="inline">格宽 <input type="number" id="cellMM" value="14" min="10" max="20" step="1"> mm</label>
+        <label class="inline">行距 <input type="number" id="rowGap" value="3" min="0" max="8" step="0.5"> mm</label>
+        <label class="inline">描红格 <input type="number" id="traceN" value="3" min="0" max="10"> 个</label>
+        <label class="inline">空格自写 <input type="number" id="blankN" value="2" min="0" max="10"> 个</label>
       </div>
       <div class="row">
-        <label class="inline"><input type="radio" name="hmode" value="demo1" checked> 每行首字示范</label>
-        <label class="inline"><input type="radio" name="hmode" value="alltrace"> 全部描红</label>
-        <label class="inline"><input type="radio" name="hmode" value="blank"> 只出空格</label>
+        <label class="inline"><input type="checkbox" id="dedupe" checked> 自动去重</label>
+        <label class="inline"><input type="radio" name="hmode" value="group" checked> 每字一组（示范+描红+空格）</label>
+        <label class="inline"><input type="radio" name="hmode" value="plain"> 连排（首字示范）</label>
       </div>
     </div>
     <div id="pinyinPanel" style="display:none">
@@ -136,7 +131,7 @@
       </div>
       <textarea id="pinyinInput" placeholder="或输入自定义拼音串">b p m f d t n l</textarea>
       <div class="row">
-        <label class="inline">格高 <input type="number" id="gridSize" value="26" min="16" max="40" style="width:64px"> px</label>
+        <label class="inline">格高 <input type="number" id="gridMM" value="7" min="4" max="12" step="0.5"> mm</label>
         <label class="inline"><input type="radio" name="pmode" value="demo1" checked> 首个示范</label>
         <label class="inline"><input type="radio" name="pmode" value="alltrace"> 全部描红</label>
       </div>
@@ -150,25 +145,27 @@
       </div>
       <textarea id="letterInput" placeholder="或输入自定义字母数字">Aa Bb Cc</textarea>
       <div class="row">
-        <label class="inline">格高 <input type="number" id="gridSize2" value="26" min="16" max="40" style="width:64px"> px</label>
+        <label class="inline">格高 <input type="number" id="gridMM2" value="7" min="4" max="12" step="0.5"> mm</label>
         <label class="inline"><input type="radio" name="lmode" value="demo1" checked> 首个示范</label>
         <label class="inline"><input type="radio" name="lmode" value="alltrace"> 全部描红</label>
       </div>
     </div>
     <div class="row">
       <button class="primary" id="printBtn">打印 / 保存 PDF</button>
+      <span style="font-size:13px;color:#7c8a82" id="pageHint"></span>
     </div>
   </div>
 
-  <div class="sheet" id="sheet"></div>
+  <div id="papers"></div>
 
   <div class="card no-print">
     <h2>规则与边界</h2>
     <ul class="notes">
-      <li>田字格：楷体（用系统自带楷体栈），每行首字深色示范、其余浅灰描红，虚线十字辅助定位。</li>
-      <li>拼音四线三格：字母按教学规范占格——<b>占上中格</b>：b p f d t l h k；<b>占中格</b>：a o e i u ü c m n r s v w x y z；<b>占中下格</b>：g q y；<b>占上中下三格</b>：j。</li>
-      <li>打印时自动隐藏设置区，A4 纵向；若浏览器打印预览里虚线消失，请在打印设置里勾选「背景图形」。</li>
-      <li>控笔练习（线条图形训练）不在本工具范围内——那需要美术设计，不是排版能解决的。</li>
+      <li><b>所见即所得</b>：纸张按 A4 实际尺寸（210×297mm）排版，格宽/行距全用毫米；打印时选「100% 缩放 / 无边距缩放」，屏幕什么样打出来就什么样。</li>
+      <li>田字格「每字一组」：1 个深色示范 + N 个浅灰描红 + M 个空格自写，组内紧挨、组间留空；每行组数、每页行数按纸宽自动计算，字多自动分页。</li>
+      <li>拼音四线三格占格规范——上中格：b p f d t l h k ü；中格：a o e i u ü c m n r s v w x z；中下格：g q y；三格：j。</li>
+      <li>打印预览若格线消失，请在打印设置勾选「背景图形」。</li>
+      <li>控笔练习（线条图形）不在范围内——那需要美术设计，不是排版能解决的。</li>
       <li>本地生成，关闭页面即忘。</li>
     </ul>
   </div>
@@ -181,75 +178,123 @@
   var SHENGMU = 'b p m f d t n l g k h j q x zh ch sh r z c s y w'.split(' ')
   var YUNMU = 'a o e i u ü ai ei ui ao ou iu ie üe er an en in un ün ang eng ing ong'.split(' ')
   var ZHENGTI = 'zhi chi shi ri zi ci si yi wu yu ye yue yuan yin yun ying'.split(' ')
+  var MM = 96 / 25.4 // 1mm in CSS px
+  var PAGE_W = 210, PAGE_H = 297, PAD_X = 12, PAD_T = 14, PAD_B = 12
 
-  // 第一版：字母统一按中格渲染（占格映射待修）
-  function render() {
-    var mode = document.querySelector('#modeTabs button.on').dataset.mode
-    var sheet = document.getElementById('sheet')
-    if (mode === 'hanzi') return renderHanzi(sheet)
-    if (mode === 'pinyin') return renderPinyin(sheet, document.getElementById('pinyinInput').value.trim().split(/\s+/), document.querySelector('input[name=pmode]:checked').value, +document.getElementById('gridSize').value)
-    var txt = document.getElementById('letterInput').value.trim()
-    var items = txt.indexOf(' ') >= 0 ? txt.split(/\s+/) : txt ? txt.split('') : []
-    return renderPinyin(sheet, items, document.querySelector('input[name=lmode]:checked').value, +document.getElementById('gridSize2').value)
+  function clamp(v, lo, hi, dflt) { v = parseFloat(v); if (isNaN(v)) v = dflt; return Math.max(lo, Math.min(hi, v)) }
+
+  // 分页渲染：把行块切到多张 A4 纸
+  function renderPages(papersEl, title, rowsHtml, rowHMM) {
+    var availH = PAGE_H - PAD_T - PAD_B - 12 /*标题区*/ - 8 /*页码区*/
+    var rowsPerPage = Math.max(1, Math.floor(availH / rowHMM))
+    var pages = []
+    for (var i = 0; i < rowsHtml.length; i += rowsPerPage) pages.push(rowsHtml.slice(i, i + rowsPerPage))
+    if (!pages.length) pages = [[]]
+    var html = ''
+    pages.forEach(function (pg, pi) {
+      html += '<div class="paper">' +
+        '<div class="sheet-title">' + title + (pages.length > 1 ? '（' + (pi + 1) + '/' + pages.length + '）' : '') + '</div>' + pg.join('') +
+        '<div class="pageno">第 ' + (pi + 1) + ' 页 / 共 ' + pages.length + ' 页</div></div>'
+    })
+    papersEl.innerHTML = html
+    return { pages: pages.length, rowsPerPage: rowsPerPage }
   }
 
-  function renderHanzi(sheet) {
+  function render() {
+    var mode = document.querySelector('#modeTabs button.on').dataset.mode
+    var papers = document.getElementById('papers')
+    if (mode === 'hanzi') return renderHanzi(papers)
+    if (mode === 'pinyin') return renderPinyinMode(papers, document.getElementById('pinyinInput').value.trim().split(/\s+/), document.querySelector('input[name=pmode]:checked').value, clamp(document.getElementById('gridMM').value, 4, 12, 7))
+    var txt = document.getElementById('letterInput').value.trim()
+    var items = txt.indexOf(' ') >= 0 ? txt.split(/\s+/) : (txt ? txt.split(' ') : [])
+    return renderPinyinMode(papers, items, document.querySelector('input[name=lmode]:checked').value, clamp(document.getElementById('gridMM2').value, 4, 12, 7))
+  }
+
+  function renderHanzi(papers) {
     var raw = document.getElementById('hanziInput').value.replace(/\s+/g, '')
     var chars = Array.from(raw)
     if (document.getElementById('dedupe').checked) {
       var seen = {}; chars = chars.filter(function (c) { if (!seen[c]) { seen[c] = 1; return true } return false })
     }
-    var perRow = Math.max(3, Math.min(14, +document.getElementById('perRow').value || 8))
-    var cell = Math.max(40, Math.min(90, +document.getElementById('cellSize').value || 64))
+    var cell = clamp(document.getElementById('cellMM').value, 10, 20, 14)
+    var rowGap = clamp(document.getElementById('rowGap').value, 0, 8, 3)
+    var traceN = Math.round(clamp(document.getElementById('traceN').value, 0, 10, 3))
+    var blankN = Math.round(clamp(document.getElementById('blankN').value, 0, 10, 2))
     var hmode = document.querySelector('input[name=hmode]:checked').value
-    var html = '<div class="sheet-title">生字练习 · 共 ' + chars.length + ' 字</div>'
-    for (var i = 0; i < chars.length; i += perRow) {
-      html += '<div class="tian-row" style="--cell:' + cell + 'px">'
-      for (var j = i; j < i + perRow && j < chars.length; j++) {
-        var cls = hmode === 'alltrace' ? 'trace' : (hmode === 'blank' ? '' : (j % perRow === 0 ? 'demo' : 'trace'))
-        html += '<div class="tian">' + (hmode === 'blank' ? '' : '<span class="zi ' + cls + '">' + chars[j] + '</span>') + '</div>'
+    var availW = PAGE_W - PAD_X * 2
+    var rows = [], rowH = cell + rowGap, groupsPerRow = 0
+
+    if (hmode === 'group') {
+      var groupCells = 1 + traceN + blankN
+      var groupW = groupCells * cell
+      groupsPerRow = Math.max(1, Math.floor((availW + 4) / (groupW + 4))) // 组间空 4mm
+      for (var i = 0; i < chars.length; i += groupsPerRow) {
+        var html = '<div class="tian-groups" style="--cell:' + cell + 'mm;--rowgap:' + rowGap + 'mm">'
+        for (var g = i; g < i + groupsPerRow && g < chars.length; g++) {
+          html += '<div class="tian-group">'
+          html += '<div class="tian"><span class="zi demo">' + chars[g] + '</span></div>'
+          for (var t = 0; t < traceN; t++) html += '<div class="tian"><span class="zi trace">' + chars[g] + '</span></div>'
+          for (var b = 0; b < blankN; b++) html += '<div class="tian"></div>'
+          html += '</div>'
+        }
+        html += '</div>'
+        rows.push(html)
+      }
+    } else {
+      var perRow = Math.max(1, Math.floor(availW / cell))
+      groupsPerRow = perRow
+      for (var i2 = 0; i2 < chars.length; i2 += perRow) {
+        var html2 = '<div class="tian-groups" style="--cell:' + cell + 'mm;--rowgap:' + rowGap + 'mm">'
+        for (var j = i2; j < i2 + perRow && j < chars.length; j++) {
+          var cls = j === i2 ? 'demo' : 'trace'
+          html2 += '<div class="tian-group"><div class="tian"><span class="zi ' + cls + '">' + chars[j] + '</span></div></div>'
+        }
+        html2 += '</div>'
+        rows.push(html2)
+      }
+    }
+    var meta = renderPages(papers, '生字练习 · 共 ' + chars.length + ' 字', rows, rowH)
+    document.getElementById('pageHint').textContent = chars.length + ' 字 · A4 ' + meta.pages + ' 页 · 每页 ' + meta.rowsPerPage + ' 行'
+    window.__last = { mode: 'hanzi', chars: chars, cell: cell, traceN: traceN, blankN: blankN, hmode: hmode, pages: meta.pages, groupsPerRow: groupsPerRow, rows: rows.length }
+  }
+
+  function renderPinyinMode(papers, items, pmode, grid) {
+    grid = clamp(grid, 4, 12, 7)
+    var rowGap = 3
+    var availW = PAGE_W - PAD_X * 2
+    var avgW = grid * 2.2
+    var perRow = Math.max(1, Math.floor((availW + 5) / (avgW + 5)))
+    var rows = []
+    for (var i = 0; i < items.length; i += perRow) {
+      var html = '<div class="py-rows" style="--grid:' + grid + 'mm;--rowgap:' + rowGap + 'mm">'
+      for (var j = i; j < i + perRow && j < items.length; j++) {
+        var cls = pmode === 'alltrace' ? 'trace' : (j === 0 ? 'demo' : 'trace')
+        var chars2 = Array.from(items[j])
+        var spans = chars2.map(function (c) { return '<span class="py-ch ' + cls + '">' + c + '</span>' }).join('')
+        html += '<div class="py-word"><span class="py-lines"><i></i><i></i><i></i><i></i></span>' +
+          '<span class="py-text" style="font-size:' + (grid * 1.9) + 'mm">' + spans + '<span class="bp"></span></span></div>'
       }
       html += '</div>'
+      rows.push(html)
     }
-    sheet.innerHTML = html
-    window.__last = { mode: 'hanzi', chars: chars, perRow: perRow, rows: Math.ceil(chars.length / perRow), hmode: hmode }
-  }
-
-  // 第二版：字母按字体学占格——统一字号 + baseline 对齐第 3 线，升部（b d l…）自然入上格、降部（g q y…）自然入下格
-  var DESC = { g: 1, q: 1, y: 1, j: 1, p: 1 }
-  function renderPinyin(sheet, items, pmode, grid) {
-    grid = Math.max(16, Math.min(40, grid || 26))
-    var html = '<div class="sheet-title">拼音 / 字母练习 · 共 ' + items.length + ' 个</div><div class="pinyin-row" style="--grid:' + grid + 'px">'
-    for (var i = 0; i < items.length; i++) {
-      var cls = pmode === 'alltrace' ? 'trace' : (i === 0 ? 'demo' : 'trace')
-      var chars = Array.from(items[i])
-      var spans = chars.map(function (c) {
-        return '<span class="py-ch ' + cls + (DESC[c] ? ' py-desc' : '') + '">' + c + '</span>'
-      }).join('')
-      html += '<div class="py-word" style="--grid:' + grid + 'px">' +
-        '<span class="py-lines"><i></i><i></i><i></i><i></i></span>' +
-        '<span class="py-text" style="font-size:' + (grid * 1.9) + 'px">' + spans + '<span class="bp"></span></span></div>'
-    }
-    html += '</div>'
-    sheet.innerHTML = html
+    var rowH = grid * 4 + rowGap
+    var meta = renderPages(papers, '拼音 / 字母练习 · 共 ' + items.length + ' 个', rows, rowH)
+    document.getElementById('pageHint').textContent = items.length + ' 个 · A4 ' + meta.pages + ' 页'
     calibrateBaseline()
-    window.__last = { mode: 'pinyin', items: items, pmode: pmode, grid: grid }
+    window.__last = { mode: 'pinyin', items: items, pmode: pmode, grid: grid, pages: meta.pages }
   }
 
-  // 第三版校准：CSS 行盒的 baseline 位置无法解析计算——渲染后用零宽探针实测，整体平移到第 3 线
   function calibrateBaseline() {
     document.querySelectorAll('.py-word').forEach(function (w) {
       var text = w.querySelector('.py-text')
       var probe = w.querySelector('.bp')
-      var grid = parseFloat(getComputedStyle(w).getPropertyValue('--grid')) || 26
+      var grid = parseFloat(getComputedStyle(w).getPropertyValue('--grid')) || 7
       var baseline = probe.getBoundingClientRect().top - w.getBoundingClientRect().top
-      var target = grid * 2
-      var dy = target - baseline
+      var dy = grid * 2 * MM - baseline
       text.style.top = dy + 'px'
     })
   }
 
-  // 事件绑定
   document.querySelectorAll('#modeTabs button').forEach(function (b) {
     b.addEventListener('click', function () {
       document.querySelectorAll('#modeTabs button').forEach(function (x) { x.classList.remove('on') })
@@ -279,13 +324,15 @@
       render()
     })
   })
-  ;['hanziInput', 'perRow', 'cellSize', 'dedupe', 'pinyinInput', 'gridSize', 'letterInput', 'gridSize2'].forEach(function (id) {
-    document.getElementById(id).addEventListener('input', render)
-    document.getElementById(id).addEventListener('change', render)
+  ;['hanziInput', 'cellMM', 'rowGap', 'traceN', 'blankN', 'dedupe', 'pinyinInput', 'gridMM', 'letterInput', 'gridMM2'].forEach(function (id) {
+    var el = document.getElementById(id)
+    el.addEventListener('input', render)
+    el.addEventListener('change', render)
   })
   document.querySelectorAll('input[name=hmode],input[name=pmode],input[name=lmode]').forEach(function (r) { r.addEventListener('change', render) })
   document.getElementById('printBtn').addEventListener('click', function () { window.print() })
   window.__SETS = { SHENGMU: SHENGMU, YUNMU: YUNMU, ZHENGTI: ZHENGTI }
+  window.__MM = MM
   render()
 })();
 </script>
