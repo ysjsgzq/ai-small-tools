@@ -4,173 +4,263 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>字帖生成器 · A4 所见即所得，田字格描红+拼音四线三格</title>
-<style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
+<style>  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --green: #58B586; --green-d: #3e9c6c; --ink: #1f2d26; --ink-2: #5b6a62; --ink-3: #93a09a;
+    --line: #e3e9e5; --bg: #f0f3f1; --panel: #ffffff;
+    --radius: 10px; --shadow: 0 1px 2px rgba(31,45,38,.05), 0 6px 24px rgba(31,45,38,.06);
+  }
+  html { -webkit-font-smoothing: antialiased; }
   body {
     font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", "Segoe UI", sans-serif;
-    background: #eef2ef; color: #22302a; min-height: 100vh; padding: 30px 8px;
+    background: var(--bg); color: var(--ink); min-height: 100vh; font-size: 14px;
   }
-  .wrap { max-width: 900px; margin: 0 auto; }
-  .top-bar { height: 6px; background: #58B586; border-radius: 3px; margin-bottom: 22px; }
-  .kicker { color: #58B586; font-weight: 600; font-size: 14px; letter-spacing: 2px; margin-bottom: 8px; }
-  h1 { font-size: 26px; margin-bottom: 6px; }
-  .sub { color: #6b7a72; font-size: 14px; margin-bottom: 20px; line-height: 1.7; }
-  .card {
-    background: #fff; border-radius: 12px; padding: 20px;
-    box-shadow: 0 1px 4px rgba(30, 60, 45, .06); margin-bottom: 16px;
+  /* ===== 顶栏 ===== */
+  .topbar {
+    position: sticky; top: 0; z-index: 50; background: rgba(255,255,255,.92); backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--line); padding: 10px 18px; display: flex; align-items: center; gap: 14px;
   }
-  .card h2 { font-size: 15px; color: #46564e; margin-bottom: 12px; }
-  select, button, textarea, input[type=text], input[type=number] {
-    font-family: inherit; font-size: 15px; padding: 8px 12px; border: 1px solid #d8e2dc;
-    border-radius: 8px; outline: none; background: #fff;
+  .brand { display: flex; align-items: baseline; gap: 10px; }
+  .brand .logo { font-weight: 700; font-size: 16px; letter-spacing: .5px; }
+  .brand .logo em { font-style: normal; color: var(--green); }
+  .brand .tag { font-size: 12px; color: var(--ink-3); }
+  .topbar .spacer { flex: 1; }
+  .btn {
+    appearance: none; border: none; cursor: pointer; font-family: inherit;
+    border-radius: 8px; padding: 8px 18px; font-size: 14px; transition: all .15s;
   }
-  textarea { width: 100%; min-height: 60px; line-height: 1.8; resize: vertical; }
-  button.primary { background: #58B586; color: #fff; border: none; cursor: pointer; }
-  button.primary:hover { background: #4aa377; }
-  .preset { cursor: pointer; }
-  .row { display: flex; flex-wrap: wrap; gap: 10px 14px; margin: 10px 0; align-items: center; }
-  label.inline { font-size: 14px; color: #46564e; display: inline-flex; align-items: center; gap: 5px; }
-  label.inline input[type=number] { width: 58px; }
-  label.inline input[type=checkbox], label.inline input[type=radio] { accent-color: #58B586; }
-  .mode-tabs { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
-  .mode-tabs button { border: 1px solid #d8e2dc; border-radius: 20px; padding: 6px 16px; background: #fff; font-size: 14px; cursor: pointer; }
-  .mode-tabs button.on { background: #58B586; color: #fff; border-color: #58B586; }
+  .btn-ghost { background: transparent; color: var(--ink-2); border: 1px solid var(--line); }
+  .btn-ghost:hover { border-color: var(--ink-3); color: var(--ink); }
+  .btn-primary { background: var(--green); color: #fff; font-weight: 600; box-shadow: 0 2px 8px rgba(88,181,134,.35); }
+  .btn-primary:hover { background: var(--green-d); }
+  .btn-primary svg { vertical-align: -2px; margin-right: 4px; }
 
-  /* ===== A4 纸张（mm 排版，所见即所得） ===== */
+  /* ===== 主布局：左侧面板 + 右侧纸张 ===== */
+  .layout { display: grid; grid-template-columns: 300px 1fr; min-height: calc(100vh - 53px); }
+  @media (max-width: 900px) { .layout { grid-template-columns: 1fr; } .side { position: static; max-height: none; border-right: none; border-bottom: 1px solid var(--line); } }
+  .side {
+    border-right: 1px solid var(--line); background: var(--panel); padding: 18px 16px 24px;
+    position: sticky; top: 53px; max-height: calc(100vh - 53px); overflow-y: auto;
+  }
+  .side h3.sec {
+    font-size: 11.5px; font-weight: 600; color: var(--ink-3); letter-spacing: 1.5px;
+    text-transform: uppercase; margin: 20px 0 10px; display: flex; align-items: center; gap: 8px;
+  }
+  .side h3.sec:first-child { margin-top: 2px; }
+  .side h3.sec::after { content: ''; flex: 1; height: 1px; background: var(--line); }
+
+  /* 分段控件 */
+  .seg { display: flex; background: #eef2ef; border-radius: 9px; padding: 3px; gap: 2px; }
+  .seg button {
+    flex: 1; border: none; background: transparent; font-family: inherit; font-size: 13px; color: var(--ink-2);
+    padding: 7px 4px; border-radius: 7px; cursor: pointer; transition: all .15s; white-space: nowrap;
+  }
+  .seg button.on { background: #fff; color: var(--ink); font-weight: 600; box-shadow: 0 1px 4px rgba(31,45,38,.10); }
+
+  /* 参数行 */
+  .field { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 0 0 12px; }
+  .field > span.lab { color: var(--ink-2); font-size: 13.5px; flex-shrink: 0; }
+  .field .val { color: var(--ink); font-variant-numeric: tabular-nums; font-size: 13px; min-width: 52px; text-align: right; }
+  .stepper { display: inline-flex; align-items: center; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+  .stepper button {
+    appearance: none; border: none; background: #fff; width: 30px; height: 30px; cursor: pointer;
+    font-size: 15px; color: var(--ink-2); transition: background .12s;
+  }
+  .stepper button:hover { background: #f0f3f1; color: var(--ink); }
+  .stepper .n { width: 40px; text-align: center; font-variant-numeric: tabular-nums; border-left: 1px solid var(--line); border-right: 1px solid var(--line); align-self: stretch; display: flex; align-items: center; justify-content: center; font-size: 13.5px; }
+  .slider-row { display: flex; align-items: center; gap: 10px; margin: 0 0 12px; }
+  .slider-row .lab { color: var(--ink-2); font-size: 13.5px; width: 58px; flex-shrink: 0; }
+  input[type=range] { -webkit-appearance: none; flex: 1; height: 4px; border-radius: 2px; background: #e0e7e2; outline: none; }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%; background: #fff;
+    border: 2px solid var(--green); box-shadow: 0 1px 4px rgba(31,45,38,.18); cursor: pointer;
+  }
+  .slider-row .val { font-variant-numeric: tabular-nums; font-size: 13px; width: 58px; text-align: right; color: var(--ink); }
+  /* toggle */
+  .toggle { position: relative; display: inline-block; width: 38px; height: 22px; flex-shrink: 0; }
+  .toggle input { opacity: 0; width: 0; height: 0; }
+  .toggle i {
+    position: absolute; inset: 0; background: #d4dcd7; border-radius: 22px; transition: .18s; cursor: pointer;
+  }
+  .toggle i::before { content: ''; position: absolute; width: 16px; height: 16px; border-radius: 50%; background: #fff; left: 3px; top: 3px; transition: .18s; box-shadow: 0 1px 3px rgba(0,0,0,.2); }
+  .toggle input:checked + i { background: var(--green); }
+  .toggle input:checked + i::before { transform: translateX(16px); }
+  /* 描红灰度色板 */
+  .swatches { display: flex; gap: 8px; }
+  .swatch {
+    width: 26px; height: 26px; border-radius: 50%; cursor: pointer; border: 2px solid transparent;
+    box-shadow: inset 0 0 0 1px rgba(0,0,0,.08); transition: all .12s;
+  }
+  .swatch.on { border-color: var(--green); box-shadow: 0 0 0 2px rgba(88,181,134,.25), inset 0 0 0 1px rgba(0,0,0,.08); }
+  textarea {
+    width: 100%; min-height: 74px; font-family: inherit; font-size: 14px; line-height: 1.8; padding: 10px 12px;
+    border: 1px solid var(--line); border-radius: 8px; outline: none; background: #fbfdfb; resize: vertical;
+    transition: border-color .15s, box-shadow .15s;
+  }
+  textarea:focus { border-color: var(--green); box-shadow: 0 0 0 3px rgba(88,181,134,.15); }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .chip {
+    appearance: none; border: 1px solid var(--line); background: #fff; border-radius: 14px;
+    padding: 4px 12px; font-size: 12.5px; color: var(--ink-2); cursor: pointer; transition: all .12s;
+  }
+  .chip:hover { border-color: var(--green); color: var(--green-d); }
+  .hint { font-size: 12px; color: var(--ink-3); line-height: 1.7; margin-top: 10px; }
+
+  /* ===== 预览区 ===== */
+  .stage { padding: 28px 20px 60px; overflow: auto; }
+  .stage .meta { text-align: center; font-size: 12.5px; color: var(--ink-3); margin-bottom: 14px; }
+  .zoombar { display: flex; justify-content: center; gap: 6px; margin-bottom: 16px; }
+  .zoombar button {
+    appearance: none; border: 1px solid var(--line); background: #fff; border-radius: 7px;
+    padding: 4px 12px; font-size: 12.5px; color: var(--ink-2); cursor: pointer;
+  }
+  .zoombar button.on { border-color: var(--green); color: var(--green-d); font-weight: 600; }
+  .zoomwrap { display: flex; justify-content: center; }
+  .zoominner { transform-origin: top center; }
+
+  /* ===== A4 纸张（mm 排版） ===== */
   .paper {
     width: 210mm; min-height: 297mm; background: #fff; margin: 0 auto 18px;
-    box-shadow: 0 2px 14px rgba(30, 60, 45, .16); border-radius: 2px;
-    padding: var(--pmt, 14mm) 12mm 12mm;
-    position: relative; overflow: hidden;
+    box-shadow: 0 1px 3px rgba(31,45,38,.12), 0 12px 40px rgba(31,45,38,.14); border-radius: 3px;
+    padding: 14mm 12mm 12mm; position: relative; overflow: hidden;
   }
   .paper .pageno { position: absolute; bottom: 5mm; left: 0; right: 0; text-align: center; font-size: 9px; color: #b6c1ba; }
-
-  /* 田字格（mm） */
+  /* 田字格 */
   .tian-groups { display: flex; flex-wrap: wrap; justify-content: space-between; row-gap: var(--rowgap, 3mm); }
   .tian-group { display: flex; }
   .tian {
     width: var(--cell, 14mm); height: var(--cell, 14mm);
-    border: 0.45mm solid #8fa198; position: relative; margin-right: -0.45mm; margin-bottom: -0.45mm;
+    border: 0.45mm solid #7e8f88; position: relative; margin-right: -0.45mm; margin-bottom: -0.45mm;
     display: flex; align-items: center; justify-content: center;
   }
   .tian:last-child { margin-right: 0; }
   .tian::before, .tian::after { content: ''; position: absolute; }
   .tian::before { left: 0; right: 0; top: 50%; height: 0.3mm; transform: translateY(-50%);
-    background: repeating-linear-gradient(90deg, #c2cec7 0 1.2mm, transparent 1.2mm 2.2mm); }
+    background: repeating-linear-gradient(90deg, #bcccc5 0 1.2mm, transparent 1.2mm 2.2mm); }
   .tian::after { top: 0; bottom: 0; left: 50%; width: 0.3mm; transform: translateX(-50%);
-    background: repeating-linear-gradient(180deg, #c2cec7 0 1.2mm, transparent 1.2mm 2.2mm); }
+    background: repeating-linear-gradient(180deg, #bcccc5 0 1.2mm, transparent 1.2mm 2.2mm); }
   .tian .zi { font-family: "Kaiti SC", "STKaiti", KaiTi, 楷体, serif; font-size: calc(var(--cell, 14mm) * 0.72); line-height: 1; z-index: 1; }
   .zi.demo { color: #2c3e33; }
-  .zi.trace { color: #ccd6d0; }
-
-  /* 拼音四线三格（mm） */
+  .zi.trace { color: var(--trace, #ccd6d0); }
+  /* 拼音四线三格 */
   .py-rows { display: flex; flex-wrap: wrap; justify-content: flex-start; column-gap: 5mm; row-gap: var(--rowgap, 3mm); }
   .py-word { height: calc(var(--grid, 7mm) * 4); min-width: calc(var(--grid, 7mm) * 1.8);
     position: relative; display: inline-flex; align-items: center; justify-content: center;
     padding: 0 calc(var(--grid, 7mm) * 0.25); }
   .py-lines { position: absolute; inset: 0; }
-  .py-lines i { position: absolute; left: 0; right: 0; height: 0.35mm; background: #8fa198; }
+  .py-lines i { position: absolute; left: 0; right: 0; height: 0.35mm; background: #7e8f88; }
   .py-lines i:nth-child(1) { top: 0; }
-  .py-lines i:nth-child(2) { top: var(--grid, 7mm); background: #c2cec7; }
-  .py-lines i:nth-child(3) { top: calc(var(--grid, 7mm) * 2); background: #c2cec7; }
+  .py-lines i:nth-child(2) { top: var(--grid, 7mm); background: #bcccc5; }
+  .py-lines i:nth-child(3) { top: calc(var(--grid, 7mm) * 2); background: #bcccc5; }
   .py-lines i:nth-child(4) { top: calc(var(--grid, 7mm) * 3); }
   .py-text { position: relative; font-family: "Kaiti SC", "STKaiti", KaiTi, serif; line-height: calc(var(--grid, 7mm) * 4); white-space: nowrap; }
   .py-ch { color: #2c3e33; }
   .py-ch.demo { color: #2c3e33; }
-  .py-ch.trace { color: #ccd6d0; }
+  .py-ch.trace { color: var(--trace, #ccd6d0); }
   .bp { display: inline-block; width: 0; height: 0; }
-
   .sheet-title { text-align: center; font-size: 5mm; color: #6b7a72; margin-bottom: 6mm; letter-spacing: 1mm; }
-  .notes { font-size: 12.5px; color: #7c8a82; line-height: 1.9; }
-  .notes li { margin-left: 18px; }
-  .foot { text-align: center; color: #9aa8a0; font-size: 12px; margin-top: 24px; }
+
+  .foot { text-align: center; color: #a9b4ae; font-size: 12px; padding: 0 0 30px; }
 
   @media print {
-    body { background: #fff; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    body { background: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     .no-print { display: none !important; }
-    .wrap { max-width: none; }
+    .layout { display: block; }
+    .stage { padding: 0; overflow: visible; }
+    .zoominner { transform: none !important; }
     .paper { box-shadow: none; margin: 0; border-radius: 0; page-break-after: always; break-after: page; }
     .paper:last-of-type { page-break-after: auto; break-after: auto; }
     @page { size: A4 portrait; margin: 0; }
-  }
-</style>
+  }</style>
 </head>
 <body>
-<div class="wrap">
-  <div class="top-bar no-print"></div>
-  <div class="kicker no-print">AI帮我做 · DAY 19</div>
-  <h1 class="no-print">字帖生成器</h1>
-  <p class="sub no-print">按 A4 纸实际尺寸所见即所得：屏幕上什么样，打印出来就什么样。田字格描红、拼音四线三格（教学占格）、字母数字，毫米级参数，字多自动分页。浏览器本地生成，不联网、不上传。</p>
+<div class="topbar no-print">
+  <div class="brand">
+    <div class="logo">AI帮我做<em> · </em>字帖生成器</div>
+    <div class="tag">田字格 · 拼音四线三格 · 字母</div>
+  </div>
+  <div class="spacer"></div>
+  <button class="btn btn-ghost" id="zoomFit">适应屏幕</button>
+  <button class="btn btn-primary" id="printBtn">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+    打印 / 存 PDF
+  </button>
+</div>
 
-  <div class="card no-print">
-    <h2>字帖设置</h2>
-    <div class="mode-tabs" id="modeTabs">
-      <button data-mode="hanzi" class="on">田字格生字</button>
-      <button data-mode="pinyin">拼音四线三格</button>
-      <button data-mode="letter">字母 / 数字</button>
+<div class="layout">
+  <aside class="side no-print">
+    <h3 class="sec">字帖类型</h3>
+    <div class="seg" id="modeTabs">
+      <button data-mode="hanzi" class="on">田字格</button>
+      <button data-mode="pinyin">拼音</button>
+      <button data-mode="letter">字母</button>
     </div>
+
     <div id="hanziPanel">
+      <h3 class="sec">练习内容</h3>
       <textarea id="hanziInput" placeholder="输入要练的生字，重复自动去重">日月水火山石田木禾</textarea>
-      <div class="row">
-        <label class="inline">格宽 <input type="number" id="cellMM" value="14" min="10" max="20" step="1"> mm</label>
-        <label class="inline">行距 <input type="number" id="rowGap" value="3" min="0" max="8" step="0.5"> mm</label>
-        <label class="inline">描红格 <input type="number" id="traceN" value="3" min="0" max="10"> 个</label>
-        <label class="inline">空格自写 <input type="number" id="blankN" value="2" min="0" max="10"> 个</label>
-      </div>
-      <div class="row">
-        <label class="inline"><input type="checkbox" id="dedupe" checked> 自动去重</label>
-        <label class="inline"><input type="radio" name="hmode" value="group" checked> 每字一组（示范+描红+空格）</label>
-        <label class="inline"><input type="radio" name="hmode" value="plain"> 连排（首字示范）</label>
-      </div>
+      <div class="hint">一行一个或连打都可以</div>
+      <h3 class="sec">版式参数</h3>
+      <div class="slider-row"><span class="lab">格宽</span><input type="range" id="cellMM" min="10" max="20" step="1" value="14"><span class="val" id="cellMMVal">14 mm</span></div>
+      <div class="slider-row"><span class="lab">行距</span><input type="range" id="rowGap" min="0" max="8" step="0.5" value="3"><span class="val" id="rowGapVal">3 mm</span></div>
+      <div class="field"><span class="lab">描红格</span><div class="stepper"><button data-step="traceN,-1">−</button><span class="n" id="traceNVal">3</span><button data-step="traceN,1">＋</button></div></div>
+      <div class="field"><span class="lab">空格自写</span><div class="stepper"><button data-step="blankN,-1">−</button><span class="n" id="blankNVal">2</span><button data-step="blankN,1">＋</button></div></div>
+      <div class="field"><span class="lab">自动去重</span><label class="toggle"><input type="checkbox" id="dedupe" checked><i></i></label></div>
+      <div class="field"><span class="lab">连排模式</span><label class="toggle"><input type="checkbox" id="plainMode"><i></i></label></div>
     </div>
+
     <div id="pinyinPanel" style="display:none">
-      <div class="row">
-        <button data-set="shengmu" class="preset">声母表（23）</button>
-        <button data-set="yunmu" class="preset">韵母表（24）</button>
-        <button data-set="zhengti" class="preset">整体认读（16）</button>
+      <h3 class="sec">常用字表</h3>
+      <div class="chips">
+        <button class="chip" data-set="shengmu">声母 23</button>
+        <button class="chip" data-set="yunmu">韵母 24</button>
+        <button class="chip" data-set="zhengti">整体认读 16</button>
       </div>
-      <textarea id="pinyinInput" placeholder="或输入自定义拼音串">b p m f d t n l</textarea>
-      <div class="row">
-        <label class="inline">格高 <input type="number" id="gridMM" value="7" min="4" max="12" step="0.5"> mm</label>
-        <label class="inline"><input type="radio" name="pmode" value="demo1" checked> 首个示范</label>
-        <label class="inline"><input type="radio" name="pmode" value="alltrace"> 全部描红</label>
-      </div>
+      <h3 class="sec">自定义内容</h3>
+      <textarea id="pinyinInput" placeholder="输入拼音，空格分隔">b p m f d t n l</textarea>
+      <h3 class="sec">版式参数</h3>
+      <div class="slider-row"><span class="lab">格高</span><input type="range" id="gridMM" min="4" max="12" step="0.5" value="7"><span class="val" id="gridMMVal">7 mm</span></div>
+      <div class="field"><span class="lab">全部描红</span><label class="toggle"><input type="checkbox" id="pAllTrace"><i></i></label></div>
     </div>
+
     <div id="letterPanel" style="display:none">
-      <div class="row">
-        <button data-lset="upper" class="preset">大写 A-Z</button>
-        <button data-lset="lower" class="preset">小写 a-z</button>
-        <button data-lset="pair" class="preset">大小写成对</button>
-        <button data-lset="digit" class="preset">数字 0-9</button>
+      <h3 class="sec">常用内容</h3>
+      <div class="chips">
+        <button class="chip" data-lset="upper">大写 A-Z</button>
+        <button class="chip" data-lset="lower">小写 a-z</button>
+        <button class="chip" data-lset="pair">大小写成对</button>
+        <button class="chip" data-lset="digit">数字 0-9</button>
       </div>
-      <textarea id="letterInput" placeholder="或输入自定义字母数字">Aa Bb Cc</textarea>
-      <div class="row">
-        <label class="inline">格高 <input type="number" id="gridMM2" value="7" min="4" max="12" step="0.5"> mm</label>
-        <label class="inline"><input type="radio" name="lmode" value="demo1" checked> 首个示范</label>
-        <label class="inline"><input type="radio" name="lmode" value="alltrace"> 全部描红</label>
-      </div>
+      <h3 class="sec">自定义内容</h3>
+      <textarea id="letterInput" placeholder="输入字母数字，空格分隔">Aa Bb Cc</textarea>
+      <h3 class="sec">版式参数</h3>
+      <div class="slider-row"><span class="lab">格高</span><input type="range" id="gridMM2" min="4" max="12" step="0.5" value="7"><span class="val" id="gridMM2Val">7 mm</span></div>
+      <div class="field"><span class="lab">全部描红</span><label class="toggle"><input type="checkbox" id="lAllTrace"><i></i></label></div>
     </div>
-    <div class="row">
-      <button class="primary" id="printBtn">打印 / 保存 PDF</button>
-      <span style="font-size:13px;color:#7c8a82" id="pageHint"></span>
+
+    <h3 class="sec">描红灰度</h3>
+    <div class="swatches" id="traceSwatches">
+      <div class="swatch on" data-c="#dde6e1" style="background:#dde6e1" title="极浅"></div>
+      <div class="swatch" data-c="#ccd6d0" style="background:#ccd6d0" title="浅（默认）"></div>
+      <div class="swatch" data-c="#b3c1ba" style="background:#b3c1ba" title="中"></div>
+      <div class="swatch" data-c="#98a8a0" style="background:#98a8a0" title="深"></div>
     </div>
-  </div>
 
-  <div id="papers"></div>
+    <div class="hint" style="margin-top:22px">拼音占格规范：上中格 b p f d t l h k ü；中格 a o e i u c m n r s v w x z；中下格 g q y；三格 j。打印时选 100% 缩放；预览里格线消失请勾选打印设置「背景图形」。控笔练习不在范围内（需要美术设计）。</div>
+  </aside>
 
-  <div class="card no-print">
-    <h2>规则与边界</h2>
-    <ul class="notes">
-      <li><b>所见即所得</b>：纸张按 A4 实际尺寸（210×297mm）排版，格宽/行距全用毫米；打印时选「100% 缩放 / 无边距缩放」，屏幕什么样打出来就什么样。</li>
-      <li>田字格「每字一组」：1 个深色示范 + N 个浅灰描红 + M 个空格自写，组内紧挨、组间留空；每行组数、每页行数按纸宽自动计算，字多自动分页。</li>
-      <li>拼音四线三格占格规范——上中格：b p f d t l h k ü；中格：a o e i u ü c m n r s v w x z；中下格：g q y；三格：j。</li>
-      <li>打印预览若格线消失，请在打印设置勾选「背景图形」。</li>
-      <li>控笔练习（线条图形）不在范围内——那需要美术设计，不是排版能解决的。</li>
-      <li>本地生成，关闭页面即忘。</li>
-    </ul>
-  </div>
-
-  <p class="foot no-print">本地生成 · 无网络请求 · AI帮我做 · Day 19</p>
+  <main class="stage">
+    <div class="meta no-print" id="pageHint"></div>
+    <div class="zoombar no-print">
+      <button data-z="fit" class="on">适应屏幕</button>
+      <button data-z="100">100%</button>
+      <button data-z="75">75%</button>
+    </div>
+    <div class="zoomwrap"><div class="zoominner" id="zoominner">
+      <div id="papers"></div>
+    </div></div>
+    <p class="foot no-print">本地生成 · 无网络请求 · AI帮我做 · Day 19</p>
+  </main>
 </div>
 
 <script>
@@ -178,14 +268,16 @@
   var SHENGMU = 'b p m f d t n l g k h j q x zh ch sh r z c s y w'.split(' ')
   var YUNMU = 'a o e i u ü ai ei ui ao ou iu ie üe er an en in un ün ang eng ing ong'.split(' ')
   var ZHENGTI = 'zhi chi shi ri zi ci si yi wu yu ye yue yuan yin yun ying'.split(' ')
-  var MM = 96 / 25.4 // 1mm in CSS px
+  var MM = 96 / 25.4
   var PAGE_W = 210, PAGE_H = 297, PAD_X = 12, PAD_T = 14, PAD_B = 12
 
+  var S = { traceN: 3, blankN: 2 }
   function clamp(v, lo, hi, dflt) { v = parseFloat(v); if (isNaN(v)) v = dflt; return Math.max(lo, Math.min(hi, v)) }
+  function $(id) { return document.getElementById(id) }
+  function SP(id, dflt) { return clamp($(id).value, dflt[0], dflt[1], dflt[2]) }
 
-  // 分页渲染：把行块切到多张 A4 纸
   function renderPages(papersEl, title, rowsHtml, rowHMM) {
-    var availH = PAGE_H - PAD_T - PAD_B - 12 /*标题区*/ - 8 /*页码区*/
+    var availH = PAGE_H - PAD_T - PAD_B - 12 - 8
     var rowsPerPage = Math.max(1, Math.floor(availH / rowHMM))
     var pages = []
     for (var i = 0; i < rowsHtml.length; i += rowsPerPage) pages.push(rowsHtml.slice(i, i + rowsPerPage))
@@ -202,43 +294,38 @@
 
   function render() {
     var mode = document.querySelector('#modeTabs button.on').dataset.mode
-    var papers = document.getElementById('papers')
+    var papers = $('papers')
     if (mode === 'hanzi') return renderHanzi(papers)
-    if (mode === 'pinyin') return renderPinyinMode(papers, document.getElementById('pinyinInput').value.trim().split(/\s+/), document.querySelector('input[name=pmode]:checked').value, clamp(document.getElementById('gridMM').value, 4, 12, 7))
-    var txt = document.getElementById('letterInput').value.trim()
-    var items = txt.indexOf(' ') >= 0 ? txt.split(/\s+/) : (txt ? txt.split(' ') : [])
-    return renderPinyinMode(papers, items, document.querySelector('input[name=lmode]:checked').value, clamp(document.getElementById('gridMM2').value, 4, 12, 7))
+    if (mode === 'pinyin') return renderPinyinMode(papers, $('pinyinInput').value.trim().split(/[\s]+/), $('pAllTrace').checked ? 'alltrace' : 'demo1', SP('gridMM', [4, 12, 7]))
+    var txt = $('letterInput').value.trim()
+    var items = txt ? txt.split(/[\s]+/) : []
+    return renderPinyinMode(papers, items, $('lAllTrace').checked ? 'alltrace' : 'demo1', SP('gridMM2', [4, 12, 7]))
   }
 
   function renderHanzi(papers) {
-    var raw = document.getElementById('hanziInput').value.replace(/\s+/g, '')
+    var raw = $('hanziInput').value.replace(/\s+/g, '')
     var chars = Array.from(raw)
-    if (document.getElementById('dedupe').checked) {
+    if ($('dedupe').checked) {
       var seen = {}; chars = chars.filter(function (c) { if (!seen[c]) { seen[c] = 1; return true } return false })
     }
-    var cell = clamp(document.getElementById('cellMM').value, 10, 20, 14)
-    var rowGap = clamp(document.getElementById('rowGap').value, 0, 8, 3)
-    var traceN = Math.round(clamp(document.getElementById('traceN').value, 0, 10, 3))
-    var blankN = Math.round(clamp(document.getElementById('blankN').value, 0, 10, 2))
-    var hmode = document.querySelector('input[name=hmode]:checked').value
+    var cell = SP('cellMM', [10, 20, 14]), rowGap = SP('rowGap', [0, 8, 3])
+    var traceN = S.traceN, blankN = S.blankN
+    var hmode = $('plainMode').checked ? 'plain' : 'group'
     var availW = PAGE_W - PAD_X * 2
     var rows = [], rowH = cell + rowGap, groupsPerRow = 0
 
     if (hmode === 'group') {
       var groupCells = 1 + traceN + blankN
-      var groupW = groupCells * cell
-      groupsPerRow = Math.max(1, Math.floor((availW + 4) / (groupW + 4))) // 组间空 4mm
+      groupsPerRow = Math.max(1, Math.floor((availW + 4) / (groupCells * cell + 4)))
       for (var i = 0; i < chars.length; i += groupsPerRow) {
         var html = '<div class="tian-groups" style="--cell:' + cell + 'mm;--rowgap:' + rowGap + 'mm">'
         for (var g = i; g < i + groupsPerRow && g < chars.length; g++) {
-          html += '<div class="tian-group">'
-          html += '<div class="tian"><span class="zi demo">' + chars[g] + '</span></div>'
+          html += '<div class="tian-group"><div class="tian"><span class="zi demo">' + chars[g] + '</span></div>'
           for (var t = 0; t < traceN; t++) html += '<div class="tian"><span class="zi trace">' + chars[g] + '</span></div>'
           for (var b = 0; b < blankN; b++) html += '<div class="tian"></div>'
           html += '</div>'
         }
-        html += '</div>'
-        rows.push(html)
+        rows.push(html + '</div>')
       }
     } else {
       var perRow = Math.max(1, Math.floor(availW / cell))
@@ -246,15 +333,13 @@
       for (var i2 = 0; i2 < chars.length; i2 += perRow) {
         var html2 = '<div class="tian-groups" style="--cell:' + cell + 'mm;--rowgap:' + rowGap + 'mm">'
         for (var j = i2; j < i2 + perRow && j < chars.length; j++) {
-          var cls = j === i2 ? 'demo' : 'trace'
-          html2 += '<div class="tian-group"><div class="tian"><span class="zi ' + cls + '">' + chars[j] + '</span></div></div>'
+          html2 += '<div class="tian-group"><div class="tian"><span class="zi ' + (j === i2 ? 'demo' : 'trace') + '">' + chars[j] + '</span></div></div>'
         }
-        html2 += '</div>'
-        rows.push(html2)
+        rows.push(html2 + '</div>')
       }
     }
     var meta = renderPages(papers, '生字练习 · 共 ' + chars.length + ' 字', rows, rowH)
-    document.getElementById('pageHint').textContent = chars.length + ' 字 · A4 ' + meta.pages + ' 页 · 每页 ' + meta.rowsPerPage + ' 行'
+    $('pageHint').textContent = chars.length + ' 字 · ' + groupsPerRow + ' 组/行 · 每页 ' + meta.rowsPerPage + ' 行 · 共 ' + meta.pages + ' 页 A4'
     window.__last = { mode: 'hanzi', chars: chars, cell: cell, traceN: traceN, blankN: blankN, hmode: hmode, pages: meta.pages, groupsPerRow: groupsPerRow, rows: rows.length }
   }
 
@@ -262,26 +347,22 @@
     grid = clamp(grid, 4, 12, 7)
     var rowGap = 3
     var availW = PAGE_W - PAD_X * 2
-    var avgW = grid * 2.2
-    var perRow = Math.max(1, Math.floor((availW + 5) / (avgW + 5)))
+    var perRow = Math.max(1, Math.floor((availW + 5) / (grid * 2.2 + 5)))
     var rows = []
     for (var i = 0; i < items.length; i += perRow) {
       var html = '<div class="py-rows" style="--grid:' + grid + 'mm;--rowgap:' + rowGap + 'mm">'
       for (var j = i; j < i + perRow && j < items.length; j++) {
         var cls = pmode === 'alltrace' ? 'trace' : (j === 0 ? 'demo' : 'trace')
-        var chars2 = Array.from(items[j])
-        var spans = chars2.map(function (c) { return '<span class="py-ch ' + cls + '">' + c + '</span>' }).join('')
+        var spans = Array.from(items[j]).map(function (c) { return '<span class="py-ch ' + cls + '">' + c + '</span>' }).join('')
         html += '<div class="py-word"><span class="py-lines"><i></i><i></i><i></i><i></i></span>' +
           '<span class="py-text" style="font-size:' + (grid * 1.9) + 'mm">' + spans + '<span class="bp"></span></span></div>'
       }
-      html += '</div>'
-      rows.push(html)
+      rows.push(html + '</div>')
     }
-    var rowH = grid * 4 + rowGap
-    var meta = renderPages(papers, '拼音 / 字母练习 · 共 ' + items.length + ' 个', rows, rowH)
-    document.getElementById('pageHint').textContent = items.length + ' 个 · A4 ' + meta.pages + ' 页'
+    var meta = renderPages(papers, '拼音 / 字母练习 · 共 ' + items.length + ' 个', rows, grid * 4 + rowGap)
+    $('pageHint').textContent = items.length + ' 个 · ' + perRow + ' 个/行 · 共 ' + meta.pages + ' 页 A4'
     calibrateBaseline()
-    window.__last = { mode: 'pinyin', items: items, pmode: pmode, grid: grid, pages: meta.pages }
+    window.__last = { mode: 'pinyin', items: items, pmode: pmode, grid: grid, pages: meta.pages, perRow: perRow }
   }
 
   function calibrateBaseline() {
@@ -289,8 +370,7 @@
       var text = w.querySelector('.py-text')
       var probe = w.querySelector('.bp')
       var grid = parseFloat(getComputedStyle(w).getPropertyValue('--grid')) || 7
-      var baseline = probe.getBoundingClientRect().top - w.getBoundingClientRect().top
-      var dy = grid * 2 * MM - baseline
+      var dy = grid * 2 * MM - (probe.getBoundingClientRect().top - w.getBoundingClientRect().top)
       text.style.top = dy + 'px'
     })
   }
@@ -299,41 +379,82 @@
     b.addEventListener('click', function () {
       document.querySelectorAll('#modeTabs button').forEach(function (x) { x.classList.remove('on') })
       b.classList.add('on')
-      document.getElementById('hanziPanel').style.display = b.dataset.mode === 'hanzi' ? '' : 'none'
-      document.getElementById('pinyinPanel').style.display = b.dataset.mode === 'pinyin' ? '' : 'none'
-      document.getElementById('letterPanel').style.display = b.dataset.mode === 'letter' ? '' : 'none'
+      $('hanziPanel').style.display = b.dataset.mode === 'hanzi' ? '' : 'none'
+      $('pinyinPanel').style.display = b.dataset.mode === 'pinyin' ? '' : 'none'
+      $('letterPanel').style.display = b.dataset.mode === 'letter' ? '' : 'none'
       render()
     })
   })
-  document.querySelectorAll('.preset').forEach(function (b) {
+  document.querySelectorAll('.chip').forEach(function (b) {
     b.addEventListener('click', function () {
       var t = b.dataset.set
-      if (t === 'shengmu') document.getElementById('pinyinInput').value = SHENGMU.join(' ')
-      if (t === 'yunmu') document.getElementById('pinyinInput').value = YUNMU.join(' ')
-      if (t === 'zhengti') document.getElementById('pinyinInput').value = ZHENGTI.join(' ')
+      if (t === 'shengmu') $('pinyinInput').value = SHENGMU.join(' ')
+      if (t === 'yunmu') $('pinyinInput').value = YUNMU.join(' ')
+      if (t === 'zhengti') $('pinyinInput').value = ZHENGTI.join(' ')
+      var l = b.dataset.lset, up = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', lo = 'abcdefghijklmnopqrstuvwxyz'
+      if (l === 'upper') $('letterInput').value = up.split('').join(' ')
+      if (l === 'lower') $('letterInput').value = lo.split('').join(' ')
+      if (l === 'pair') $('letterInput').value = up.split('').map(function (c, i) { return c + lo[i] }).join(' ')
+      if (l === 'digit') $('letterInput').value = '0123456789'.split('').join(' ')
       render()
     })
   })
-  document.querySelectorAll('[data-lset]').forEach(function (b) {
+  var sliderMap = [['cellMM', 'cellMMVal'], ['rowGap', 'rowGapVal'], ['gridMM', 'gridMMVal'], ['gridMM2', 'gridMM2Val']]
+  sliderMap.forEach(function (m) {
+    $(m[0]).addEventListener('input', function () {
+      var v = parseFloat(this.value)
+      $(m[1]).textContent = (v % 1 === 0 ? v : v.toFixed(1)) + ' mm'
+      render()
+    })
+  })
+  document.querySelectorAll('.stepper button').forEach(function (b) {
     b.addEventListener('click', function () {
-      var t = b.dataset.lset, up = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', lo = 'abcdefghijklmnopqrstuvwxyz'
-      if (t === 'upper') document.getElementById('letterInput').value = up.split('').join(' ')
-      if (t === 'lower') document.getElementById('letterInput').value = lo.split('').join(' ')
-      if (t === 'pair') document.getElementById('letterInput').value = up.split('').map(function (c, i) { return c + lo[i] }).join(' ')
-      if (t === 'digit') document.getElementById('letterInput').value = '0123456789'.split('').join(' ')
+      var parts = b.dataset.step.split(',')
+      var key = parts[0], d = parseInt(parts[1], 10)
+      S[key] = Math.max(0, Math.min(10, S[key] + d))
+      $(key + 'Val').textContent = S[key]
       render()
     })
   })
-  ;['hanziInput', 'cellMM', 'rowGap', 'traceN', 'blankN', 'dedupe', 'pinyinInput', 'gridMM', 'letterInput', 'gridMM2'].forEach(function (id) {
-    var el = document.getElementById(id)
-    el.addEventListener('input', render)
-    el.addEventListener('change', render)
+  ;['hanziInput', 'pinyinInput', 'letterInput'].forEach(function (id) { $(id).addEventListener('input', render) })
+  ;['dedupe', 'plainMode', 'pAllTrace', 'lAllTrace'].forEach(function (id) { $(id).addEventListener('change', render) })
+  document.querySelectorAll('#traceSwatches .swatch').forEach(function (sw) {
+    sw.addEventListener('click', function () {
+      document.querySelectorAll('#traceSwatches .swatch').forEach(function (x) { x.classList.remove('on') })
+      sw.classList.add('on')
+      $('papers').style.setProperty('--trace', sw.dataset.c)
+    })
   })
-  document.querySelectorAll('input[name=hmode],input[name=pmode],input[name=lmode]').forEach(function (r) { r.addEventListener('change', render) })
-  document.getElementById('printBtn').addEventListener('click', function () { window.print() })
+  function applyZoom(z) {
+    var inner = $('zoominner')
+    if (z === 'fit') {
+      var stage = document.querySelector('.stage')
+      inner.style.transform = 'scale(' + Math.min(1, (stage.clientWidth - 40) / (210 * MM)) + ')'
+    } else {
+      inner.style.transform = 'scale(' + (parseInt(z, 10) / 100) + ')'
+    }
+  }
+  document.querySelectorAll('.zoombar button').forEach(function (b) {
+    b.addEventListener('click', function () {
+      document.querySelectorAll('.zoombar button').forEach(function (x) { x.classList.remove('on') })
+      b.classList.add('on')
+      applyZoom(b.dataset.z)
+    })
+  })
+  $('zoomFit').addEventListener('click', function () {
+    document.querySelectorAll('.zoombar button').forEach(function (x) { x.classList.toggle('on', x.dataset.z === 'fit') })
+    applyZoom('fit')
+  })
+  $('printBtn').addEventListener('click', function () { window.print() })
+
   window.__SETS = { SHENGMU: SHENGMU, YUNMU: YUNMU, ZHENGTI: ZHENGTI }
   window.__MM = MM
   render()
+  applyZoom('fit')
+  window.addEventListener('resize', function () {
+    var on = document.querySelector('.zoombar button.on')
+    if (on && on.dataset.z === 'fit') applyZoom('fit')
+  })
 })();
 </script>
 </body>
