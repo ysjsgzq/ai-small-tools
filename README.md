@@ -20,6 +20,7 @@
 | Day 15 | 图片转文字 | 浏览器本地 OCR、放大灰度预处理、批量识别可复制 | [`tools/day-15-image-to-text/`](tools/day-15-image-to-text/) |
 | Day 16 | 文本对比工具 | 两级 LCS 逐字标差异、行号定位、差异清单可复制 | [`tools/day-16-text-diff/`](tools/day-16-text-diff/) |
 | Day 17 | 字数统计工具 | Word 口径分词、六口径一次算清、投稿/公文/作文场景 | [`tools/day-17-word-counter/`](tools/day-17-word-counter/) |
+| Day 18 | 古诗默写卷生成器 | 选诗自动挖空、三档难度、锚点保护、附答案页可打印 | [`tools/day-18-poem-dictation/`](tools/day-18-poem-dictation/) |
 
 ## 仓库结构
 
@@ -86,7 +87,10 @@
     ├── day-16-text-diff/
     │   ├── README.md
     │   └── index.html
-    └── day-17-word-counter/
+    ├── day-17-word-counter/
+    │   ├── README.md
+    │   └── index.html
+    └── day-18-poem-dictation/
         ├── README.md
         └── index.html
 ```

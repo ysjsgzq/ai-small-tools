@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>古诗默写卷生成器 · 选一首自动挖空可打印</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", "Segoe UI", sans-serif;
+    background: #f6f8f6; color: #22302a; min-height: 100vh; padding: 40px 16px;
+  }
+  .wrap { max-width: 760px; margin: 0 auto; }
+  .top-bar { height: 6px; background: #58B586; border-radius: 3px; margin-bottom: 28px; }
+  .kicker { color: #58B586; font-weight: 600; font-size: 14px; letter-spacing: 2px; margin-bottom: 8px; }
+  h1 { font-size: 28px; margin-bottom: 6px; }
+  .sub { color: #6b7a72; font-size: 14px; margin-bottom: 24px; line-height: 1.7; }
+  .card {
+    background: #fff; border-radius: 12px; padding: 22px;
+    box-shadow: 0 1px 4px rgba(30, 60, 45, .06); margin-bottom: 16px;
+  }
+  .card h2 { font-size: 15px; color: #46564e; margin-bottom: 12px; }
+  select, button {
+    font-family: inherit; font-size: 15px; padding: 9px 14px; border: 1px solid #d8e2dc;
+    border-radius: 8px; outline: none; background: #fff; cursor: pointer;
+  }
+  select:focus { border-color: #58B586; }
+  .controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  button.primary { background: #58B586; color: #fff; border: none; }
+  button.primary:hover { background: #4aa377; }
+  .level { display: flex; gap: 10px; }
+  .level label {
+    border: 1px solid #d8e2dc; border-radius: 20px; padding: 6px 16px; font-size: 14px;
+    cursor: pointer; user-select: none;
+  }
+  .level input { accent-color: #58B586; margin-right: 4px; }
+  /* 卷面 */
+  .paper {
+    background: #fff; border: 1px solid #e2e9e4; border-radius: 12px; padding: 40px 32px;
+    margin-bottom: 16px;
+  }
+  .paper .paper-title { text-align: center; font-size: 20px; font-weight: 700; letter-spacing: 1px; margin-bottom: 6px; }
+  .paper .paper-meta { text-align: center; color: #6b7a72; font-size: 13px; margin-bottom: 26px; }
+  .poem-line {
+    font-size: 20px; line-height: 2.6; letter-spacing: 2px; text-align: center;
+    font-family: "Songti SC", "STSong", "SimSun", serif;
+  }
+  .blank {
+    display: inline-block; min-width: 1.4em; border-bottom: 2px solid #22302a;
+    margin: 0 2px; text-align: center; color: #b04a2f; font-weight: 700;
+  }
+  .answer-note { text-align: center; color: #9aa8a0; font-size: 12px; margin-top: 30px; }
+  .answer-line { color: #1e7a52; font-weight: 600; }
+  .answer-line .blank { border-bottom: none; color: #b04a2f; }
+  .notes { font-size: 12.5px; color: #7c8a82; line-height: 1.9; }
+  .notes li { margin-left: 18px; }
+  .foot { text-align: center; color: #9aa8a0; font-size: 12px; margin-top: 26px; }
+  @media print {
+    body { background: #fff; padding: 0; }
+    .no-print { display: none !important; }
+    .wrap { max-width: none; }
+    .paper { border: none; padding: 20px 0; page-break-after: always; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top-bar no-print"></div>
+  <div class="kicker no-print">AI帮我做 · DAY 18</div>
+  <h1 class="no-print">古诗默写卷生成器</h1>
+  <p class="sub no-print">选一首古诗，自动随机挖空生成默写卷，附答案页，直接打印。给娃听写前不用再手抄挖空半小时。浏览器本地生成，不联网、不上传。</p>
+
+  <div class="card no-print">
+    <h2>出卷</h2>
+    <div class="controls" style="margin-bottom: 14px;">
+      <select id="poemSel"></select>
+    </div>
+    <div class="level" style="margin-bottom: 14px;">
+      <label><input type="radio" name="level" value="easy" checked>简单（隔句挖 1 字）</label>
+      <label><input type="radio" name="level" value="mid">中等（每句挖 1 字）</label>
+      <label><input type="radio" name="level" value="hard">困难（每句挖 2 字）</label>
+    </div>
+    <div class="controls">
+      <button class="primary" id="genBtn">重新出卷</button>
+      <button id="printBtn">打印 / 保存 PDF</button>
+    </div>
+  </div>
+
+  <div class="paper" id="paperQuiz"></div>
+  <div class="paper" id="paperAnswer"></div>
+
+  <div class="card no-print">
+    <h2>说明与边界</h2>
+    <ul class="notes">
+      <li>诗库为小学必背古诗 12 首，原文按人教版教材口径录入；《山行》「白云<b>生</b>处有人家」从人教版（生处），部分读物作「深处」，默写以课本为准。</li>
+      <li>挖空只挖汉字，不挖标点和题目；同一句内不会挖相同的字。</li>
+      <li>「重新出卷」每次随机，可以出多份不同的卷子反复默。</li>
+      <li>打印时自动隐藏页面控件，卷面与答案页分页，A4 直接打。</li>
+      <li>本地生成，关闭页面即忘。</li>
+    </ul>
+  </div>
+
+  <p class="foot no-print">本地生成 · 无网络请求 · AI帮我做 · Day 18</p>
+</div>
+
+<script>
+(function () {
+  var POEMS = [
+    { title: '静夜思', author: '李白', dynasty: '唐', lines: ['床前明月光，', '疑是地上霜。', '举头望明月，', '低头思故乡。'] },
+    { title: '春晓', author: '孟浩然', dynasty: '唐', lines: ['春眠不觉晓，', '处处闻啼鸟。', '夜来风雨声，', '花落知多少。'] },
+    { title: '咏鹅', author: '骆宾王', dynasty: '唐', lines: ['鹅，鹅，鹅，', '曲项向天歌。', '白毛浮绿水，', '红掌拨清波。'] },
+    { title: '悯农（其二）', author: '李绅', dynasty: '唐', lines: ['锄禾日当午，', '汗滴禾下土。', '谁知盘中餐，', '粒粒皆辛苦。'] },
+    { title: '登鹳雀楼', author: '王之涣', dynasty: '唐', lines: ['白日依山尽，', '黄河入海流。', '欲穷千里目，', '更上一层楼。'] },
+    { title: '望庐山瀑布', author: '李白', dynasty: '唐', lines: ['日照香炉生紫烟，', '遥看瀑布挂前川。', '飞流直下三千尺，', '疑是银河落九天。'] },
+    { title: '绝句', author: '杜甫', dynasty: '唐', lines: ['两个黄鹂鸣翠柳，', '一行白鹭上青天。', '窗含西岭千秋雪，', '门泊东吴万里船。'] },
+    { title: '山行', author: '杜牧', dynasty: '唐', lines: ['远上寒山石径斜，', '白云生处有人家。', '停车坐爱枫林晚，', '霜叶红于二月花。'] },
+    { title: '小池', author: '杨万里', dynasty: '宋', lines: ['泉眼无声惜细流，', '树阴照水爱晴柔。', '小荷才露尖尖角，', '早有蜻蜓立上头。'] },
+    { title: '村居', author: '高鼎', dynasty: '清', lines: ['草长莺飞二月天，', '拂堤杨柳醉春烟。', '儿童散学归来早，', '忙趁东风放纸鸢。'] },
+    { title: '游子吟', author: '孟郊', dynasty: '唐', lines: ['慈母手中线，', '游子身上衣。', '临行密密缝，', '意恐迟迟归。', '谁言寸草心，', '报得三春晖。'] },
+    { title: '出塞', author: '王昌龄', dynasty: '唐', lines: ['秦时明月汉时关，', '万里长征人未还。', '但使龙城飞将在，', '不教胡马度阴山。'] }
+  ]
+
+  // 第二版：按句定额分配 + 锚点保护
+  // 规则：easy=偶数句挖 1 字；mid=每句挖 1 字；hard=每句挖 2 字
+  // 保护：① 同句重复字只挖首次出现（「举头望明月」两个「头」挖一个）② 禁止相邻两字都被挖（保留默写锚点）③ 单句挖空不超过本句不同汉字数的一半
+  function blankLineStructured(text, want) {
+    var chars = Array.from(text)
+    var seen = {}, positions = []
+    for (var i = 0; i < chars.length; i++) {
+      var ch = chars[i]
+      if (/[\u4e00-\u9fff]/.test(ch) && !seen[ch]) { seen[ch] = 1; positions.push(i) }
+    }
+    if (!positions.length) return text
+    var maxN = Math.max(1, Math.floor(positions.length / 2))
+    var n = Math.min(want, maxN)
+    // 洗牌后贪心挑选，跳过与已选位置相邻的
+    for (var k = positions.length - 1; k > 0; k--) {
+      var r = Math.floor(Math.random() * (k + 1))
+      var tmp = positions[k]; positions[k] = positions[r]; positions[r] = tmp
+    }
+    var picked = []
+    for (var j = 0; j < positions.length && picked.length < n; j++) {
+      var p = positions[j]
+      var adj = picked.some(function (q) { return Math.abs(q - p) <= 1 })
+      if (!adj) picked.push(p)
+    }
+    for (var m = 0; m < picked.length; m++) chars[picked[m]] = '＿'
+    return chars.join('')
+  }
+
+  function generate(poem, level) {
+    return poem.lines.map(function (line, idx) {
+      var want = level === 'easy' ? (idx % 2 === 1 ? 1 : 0) : level === 'mid' ? 1 : 2
+      return blankLineStructured(line, want)
+    })
+  }
+
+  function render() {
+    var idx = parseInt(document.getElementById('poemSel').value, 10) || 0
+    var level = document.querySelector('input[name=level]:checked').value
+    var poem = POEMS[idx]
+    var lines = generate(poem, level)
+    document.getElementById('paperQuiz').innerHTML =
+      '<div class="paper-title">古诗默写卷 · 《' + poem.title + '》</div>' +
+      '<div class="paper-meta">[' + poem.dynasty + '] ' + poem.author + ' · ' + new Date().toLocaleDateString('zh-CN') + '</div>' +
+      lines.map(function (l) { return '<div class="poem-line">' + l + '</div>' }).join('') +
+      '<div class="answer-note">默写完成后翻到下一页对答案</div>'
+    document.getElementById('paperAnswer').innerHTML =
+      '<div class="paper-title">答案 · 《' + poem.title + '》</div>' +
+      '<div class="paper-meta">红字为本卷挖空处</div>' +
+      poem.lines.map(function (l) { return '<div class="poem-line answer-line">' + l + '</div>' }).join('')
+    window.__last = { poem: poem, level: level, lines: lines }
+  }
+
+  var sel = document.getElementById('poemSel')
+  POEMS.forEach(function (p, i) {
+    var o = document.createElement('option')
+    o.value = i; o.textContent = '《' + p.title + '》 ' + p.dynasty + '·' + p.author
+    sel.appendChild(o)
+  })
+  document.getElementById('genBtn').addEventListener('click', render)
+  document.getElementById('printBtn').addEventListener('click', function () { window.print() })
+  sel.addEventListener('change', render)
+  document.querySelectorAll('input[name=level]').forEach(function (r) { r.addEventListener('change', render) })
+  window.__POEMS = POEMS
+  window.__generate = generate
+  render()
+})();
+</script>
+</body>
+</html>
