@@ -207,6 +207,7 @@
       <div class="slider-row"><span class="lab">行距</span><input type="range" id="rowGap" min="0" max="8" step="0.5" value="3"><span class="val" id="rowGapVal">3 mm</span></div>
       <div class="field"><span class="lab">描红格</span><div class="stepper"><button data-step="traceN,-1">−</button><span class="n" id="traceNVal">3</span><button data-step="traceN,1">＋</button></div></div>
       <div class="field"><span class="lab">空格自写</span><div class="stepper"><button data-step="blankN,-1">−</button><span class="n" id="blankNVal">2</span><button data-step="blankN,1">＋</button></div></div>
+      <div class="field" style="flex-wrap:wrap"><span class="lab">每行字数</span><div class="chips" id="perRowChips" style="margin:0"></div></div>
       <div class="field"><span class="lab">自动去重</span><label class="toggle"><input type="checkbox" id="dedupe" checked><i></i></label></div>
       <div class="field"><span class="lab">连排模式</span><label class="toggle"><input type="checkbox" id="plainMode"><i></i></label></div>
     </div>
@@ -273,7 +274,7 @@
   var MM = 96 / 25.4
   var PAGE_W = 210, PAGE_H = 297, PAD_X = 12, PAD_T = 14, PAD_B = 12
 
-  var S = { traceN: 3, blankN: 2 }
+  var S = { traceN: 3, blankN: 2, perRow: 0 }
   function clamp(v, lo, hi, dflt) { v = parseFloat(v); if (isNaN(v)) v = dflt; return Math.max(lo, Math.min(hi, v)) }
   function $(id) { return document.getElementById(id) }
   function SP(id, dflt) { return clamp($(id).value, dflt[0], dflt[1], dflt[2]) }
@@ -293,6 +294,27 @@
     })
     papersEl.innerHTML = html
     return { pages: pages.length, rowsPerPage: rowsPerPage }
+  }
+
+  function autoPerRow() {
+    var cell = SP('cellMM', [10, 20, 14])
+    var availW = PAGE_W - PAD_X * 2
+    if ($('plainMode').checked) return Math.max(1, Math.floor(availW / cell))
+    return Math.max(1, Math.floor((availW + 4) / ((1 + S.traceN + S.blankN) * cell + 4)))
+  }
+  function refreshPerRowChips() {
+    var auto = autoPerRow()
+    if (S.perRow > auto) S.perRow = auto
+    var html = '<button class="chip' + (S.perRow === 0 ? ' on' : '') + '" data-pr="0">\u81ea\u52a8</button>'
+    for (var i = 1; i <= Math.min(auto, 8); i++) html += '<button class="chip' + (S.perRow === i ? ' on' : '') + '" data-pr="' + i + '">' + i + '</button>'
+    var box = $('perRowChips')
+    box.innerHTML = html
+    box.querySelectorAll('.chip').forEach(function (c) {
+      c.addEventListener('click', function () {
+        S.perRow = parseInt(c.dataset.pr, 10)
+        refreshPerRowChips(); render()
+      })
+    })
   }
 
   function render() {
@@ -319,7 +341,7 @@
 
     if (hmode === 'group') {
       var groupCells = 1 + traceN + blankN
-      groupsPerRow = Math.max(1, Math.floor((availW + 4) / (groupCells * cell + 4)))
+      groupsPerRow = S.perRow > 0 ? Math.min(S.perRow, Math.max(1, Math.floor((availW + 4) / (groupCells * cell + 4)))) : Math.max(1, Math.floor((availW + 4) / (groupCells * cell + 4)))
       for (var i = 0; i < chars.length; i += groupsPerRow) {
         var html = '<div class="tian-groups" style="--cell:' + cell + 'mm;--rowgap:' + rowGap + 'mm">'
         for (var g = i; g < i + groupsPerRow && g < chars.length; g++) {
@@ -331,7 +353,7 @@
         rows.push(html + '</div>')
       }
     } else {
-      var perRow = Math.max(1, Math.floor(availW / cell))
+      var perRow = S.perRow > 0 ? Math.min(S.perRow, Math.max(1, Math.floor(availW / cell))) : Math.max(1, Math.floor(availW / cell))
       groupsPerRow = perRow
       for (var i2 = 0; i2 < chars.length; i2 += perRow) {
         var html2 = '<div class="tian-groups" style="--cell:' + cell + 'mm;--rowgap:' + rowGap + 'mm">'
@@ -407,7 +429,7 @@
     $(m[0]).addEventListener('input', function () {
       var v = parseFloat(this.value)
       $(m[1]).textContent = (v % 1 === 0 ? v : v.toFixed(1)) + ' mm'
-      render()
+      refreshPerRowChips(); render()
     })
   })
   document.querySelectorAll('.stepper button').forEach(function (b) {
@@ -416,11 +438,11 @@
       var key = parts[0], d = parseInt(parts[1], 10)
       S[key] = Math.max(0, Math.min(10, S[key] + d))
       $(key + 'Val').textContent = S[key]
-      render()
+      refreshPerRowChips(); render()
     })
   })
   ;['hanziInput', 'pinyinInput', 'letterInput'].forEach(function (id) { $(id).addEventListener('input', render) })
-  ;['dedupe', 'plainMode', 'pAllTrace', 'lAllTrace'].forEach(function (id) { $(id).addEventListener('change', render) })
+  ;['dedupe', 'plainMode', 'pAllTrace', 'lAllTrace'].forEach(function (id) { $(id).addEventListener('change', function () { refreshPerRowChips(); render() }) })
   document.querySelectorAll('#traceSwatches .swatch').forEach(function (sw) {
     sw.addEventListener('click', function () {
       document.querySelectorAll('#traceSwatches .swatch').forEach(function (x) { x.classList.remove('on') })
@@ -450,6 +472,7 @@
   })
   $('printBtn').addEventListener('click', function () { window.print() })
 
+  refreshPerRowChips()
   window.__SETS = { SHENGMU: SHENGMU, YUNMU: YUNMU, ZHENGTI: ZHENGTI }
   window.__MM = MM
   render()
