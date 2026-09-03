@@ -158,6 +158,7 @@
     <div class="slider-row"><span class="lab">音调</span><input type="range" id="pitch" min="0.7" max="1.3" step="0.05" value="1.0"><span class="val" id="pitchVal">1.0</span></div>
     <div class="field"><span class="lab">随机顺序</span><label class="toggle"><input type="checkbox" id="shuffle"><i></i></label></div>
     <div class="field"><span class="lab">最后3秒滴声</span><label class="toggle"><input type="checkbox" id="beepOn" checked><i></i></label></div>
+    <div class="field"><span class="lab">最后一词前提醒</span><label class="toggle"><input type="checkbox" id="lastCallOn" checked><i></i></label></div>
     <div class="field"><span class="lab">报词时显示字</span><label class="toggle"><input type="checkbox" id="showWord"><i></i></label></div>
 
     <div class="hint" style="margin-top:22px">点「开始听写」后按顺序自动报词，每个词的间隔留足书写时间；听完全部后逐词核对，标出错词可以只重听错词。全程本地运行，不联网、不上传。听写内容不显示在屏幕上（可开），防止变「看写」。</div>
@@ -277,8 +278,6 @@
         else if (onEnd) onEnd()
       }
       speechSynthesis.speak(u)
-      window.__spoken = window.__spoken || []
-      window.__spoken.push(word)
     }
     once()
   }
@@ -293,12 +292,24 @@
     var words = wordsOverride || parseWords($('wordInput').value)
     if (!words.length) { alert('先在左侧输入要听写的词语'); return }
     state.order = $('shuffle').checked ? shuffleArr(words) : words
-    state.idx = 0; state.paused = false; state.phase = 'live'
+    state.idx = 0; state.paused = false; state.phase = 'live'; state.lastNotified = false
     window.__spoken = []
     $('idleView').style.display = 'none'; $('doneView').style.display = 'none'; $('liveView').style.display = ''
     $('stopBtn').style.display = ''
     $('totalNo').textContent = state.order.length
     playCurrent()
+  }
+
+  function speakNotice(text, done) {
+    speechSynthesis.cancel()
+    var gen = ++speakGen
+    var u = new SpeechSynthesisUtterance(text)
+    u.lang = 'zh-CN'
+    if (zhVoice) u.voice = zhVoice
+    u.rate = clampN(parseFloat($('rate').value) || 0.7, 0.4, 1.2)
+    u.pitch = clampN(parseFloat($('pitch').value) || 1, 0.7, 1.3)
+    u.onend = function () { if (gen === speakGen && state.phase === 'live' && !state.paused) done() }
+    speechSynthesis.speak(u)
   }
 
   function playCurrent() {
@@ -307,10 +318,17 @@
     $('curNo').textContent = state.idx + 1
     $('barFill').style.width = (state.idx / state.order.length * 100) + '%'
     $('nowWord').textContent = $('showWord').checked ? word : '🔊'
-    speakWord(word, function () {
+    var afterWord = function () {
       if (state.phase !== 'live' || state.paused) return
       countdownThenNext(parseInt($('gapSec').value, 10))
-    })
+    }
+    var isLast = state.idx === state.order.length - 1
+    if (isLast && $('lastCallOn').checked && !state.lastNotified) {
+      state.lastNotified = true
+      speakNotice('注意，最后一个词', function () { speakWord(word, afterWord) })
+    } else {
+      speakWord(word, afterWord)
+    }
   }
 
   // 炸弹倒计时式滴声：最后 3 秒每秒一声，音调逐秒升高
