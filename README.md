@@ -22,6 +22,7 @@
 | Day 17 | 字数统计工具 | Word 口径分词、六口径一次算清、投稿/公文/作文场景 | [`tools/day-17-word-counter/`](tools/day-17-word-counter/) |
 | Day 18 | 古诗默写卷生成器 | 79 首小学必背、搜索选诗、三档难度锚点保护、答案页可打印 | [`tools/day-18-poem-dictation/`](tools/day-18-poem-dictation/) |
 | Day 19 | 字帖生成器 | 田字格描红、拼音四线三格教学占格、字母数字成对、A4 打印 | [`tools/day-19-copybook-generator/`](tools/day-19-copybook-generator/) |
+| Day 20 | 生字听写工具 | 自动语音报词、可调速与间隔、随机顺序、错词标记重听闭环 | [`tools/day-20-dictation/`](tools/day-20-dictation/) |
 
 ## 仓库结构
 
@@ -94,7 +95,10 @@
     ├── day-18-poem-dictation/
     │   ├── README.md
     │   └── index.html
-    └── day-19-copybook-generator/
+    ├── day-19-copybook-generator/
+    │   ├── README.md
+    │   └── index.html
+    └── day-20-dictation/
         ├── README.md
         └── index.html
 ```
