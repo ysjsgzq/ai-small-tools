@@ -135,6 +135,13 @@
   <aside class="side">
     <h3 class="sec">语音状态</h3>
     <div class="voice-status warn" id="voiceStatus">正在检测中文语音……</div>
+    <div class="field" style="margin-top:10px"><span class="lab">音色</span>
+      <div style="display:flex;gap:6px;flex:1;justify-content:flex-end">
+        <select id="voiceSel" style="font-size:13px;padding:6px 8px;max-width:150px"></select>
+        <button class="btn btn-ghost" id="previewBtn" style="padding:6px 10px;font-size:12.5px">试听</button>
+      </div>
+    </div>
+    <div class="hint" style="margin-top:0">音色列表因设备而异：Mac/手机各有不同，多试几个，选个顺耳的。选择会自动记住。</div>
 
     <h3 class="sec">今晚的词表</h3>
     <textarea id="wordInput" placeholder="输入要听写的词语，用空格、逗号或换行分隔&#10;如：火车 大海 高山 天空">火车 大海 高山 天空 春天 月亮 学校 老师</textarea>
@@ -146,7 +153,9 @@
     <h3 class="sec">听写设置</h3>
     <div class="field"><span class="lab">每词朗读</span><div class="stepper"><button data-step="repeat,-1">−</button><span class="n" id="repeatVal">2</span><button data-step="repeat,1">＋</button></div></div>
     <div class="slider-row"><span class="lab">词间隔</span><input type="range" id="gapSec" min="3" max="30" step="1" value="8"><span class="val" id="gapVal">8 秒</span></div>
-    <div class="slider-row"><span class="lab">语速</span><input type="range" id="rate" min="0.5" max="1.2" step="0.05" value="0.85"><span class="val" id="rateVal">0.85x</span></div>
+    <div class="slider-row"><span class="lab">遍间隔</span><input type="range" id="pauseMs" min="300" max="3000" step="100" value="1000"><span class="val" id="pauseVal">1.0 秒</span></div>
+    <div class="slider-row"><span class="lab">语速</span><input type="range" id="rate" min="0.4" max="1.2" step="0.05" value="0.7"><span class="val" id="rateVal">0.7x</span></div>
+    <div class="slider-row"><span class="lab">音调</span><input type="range" id="pitch" min="0.7" max="1.3" step="0.05" value="1.0"><span class="val" id="pitchVal">1.0</span></div>
     <div class="field"><span class="lab">随机顺序</span><label class="toggle"><input type="checkbox" id="shuffle"><i></i></label></div>
     <div class="field"><span class="lab">报词时显示字</span><label class="toggle"><input type="checkbox" id="showWord"><i></i></label></div>
 
@@ -202,17 +211,47 @@
   }
 
   // ===== 语音（v1：直接同步取 voices——异步加载的坑由测试暴露） =====
-  var zhVoice = null
-  function pickVoice() {
-    var vs = speechSynthesis.getVoices()
-    zhVoice = vs.find(function (v) { return /^zh([-_]CN)?$/i.test(v.lang) }) || vs.find(function (v) { return /^zh/i.test(v.lang) }) || null
+  var zhVoices = [], zhVoice = null
+  function fillVoiceSel() {
+    var saved = null
+    try { saved = localStorage.getItem('dictVoice') } catch (e) {}
+    var sel = $('voiceSel')
+    sel.innerHTML = zhVoices.map(function (v, i) {
+      return '<option value="' + i + '"' + (saved !== null && v.name + '|' + v.lang === saved ? ' selected' : '') + '>' + v.name + '</option>'
+    }).join('')
+    restoreVoice()
+  }
+  function restoreVoice() {
+    var saved = null
+    try { saved = localStorage.getItem('dictVoice') } catch (e) {}
+    zhVoice = zhVoices.find(function (v) { return v.name + '|' + v.lang === saved }) || zhVoices[0] || null
     var box = $('voiceStatus')
-    if (zhVoice) { box.className = 'voice-status ok'; box.textContent = '已就绪：' + zhVoice.name + '（' + zhVoice.lang + '）' }
-    else { box.className = 'voice-status warn'; box.textContent = '未检测到中文语音。仍可开始：报词将使用系统默认语音；若发音异常，请换 Safari/Edge 浏览器，或用「家长手动报词」模式。' }
-    return !!zhVoice
+    if (zhVoice) { box.className = 'voice-status ok'; box.textContent = '已就绪：' + zhVoice.name + '（' + zhVoice.lang + '）· 共 ' + zhVoices.length + ' 个中文音色可选' }
+    else { box.className = 'voice-status warn'; box.textContent = '未检测到中文语音。仍可开始：报词将使用系统默认语音；若发音异常，请换 Safari/Edge 浏览器。' }
+  }
+  function pickVoice() {
+    zhVoices = speechSynthesis.getVoices().filter(function (v) { return /^zh/i.test(v.lang) })
+    fillVoiceSel()
   }
   pickVoice()
   if (speechSynthesis.onvoiceschanged !== undefined) speechSynthesis.onvoiceschanged = pickVoice
+  $('voiceSel').addEventListener('change', function () {
+    var i = parseInt(this.value, 10)
+    if (zhVoices[i]) {
+      zhVoice = zhVoices[i]
+      try { localStorage.setItem('dictVoice', zhVoice.name + '|' + zhVoice.lang) } catch (e) {}
+      restoreVoice()
+    }
+  })
+  $('previewBtn').addEventListener('click', function () {
+    var u = new SpeechSynthesisUtterance('现在听写第一个词')
+    u.lang = 'zh-CN'
+    if (zhVoice) u.voice = zhVoice
+    u.rate = clampN(parseFloat($('rate').value) || 0.7, 0.4, 1.2)
+    u.pitch = clampN(parseFloat($('pitch').value) || 1, 0.7, 1.3)
+    speechSynthesis.cancel()
+    speechSynthesis.speak(u)
+  })
 
   // 报词代际令牌：每次开始报新词递增；旧代的重播定时器/回调全部作废，防止快速切词时旧词追读
   var speakGen = 0
@@ -220,17 +259,20 @@
     speechSynthesis.cancel()
     var gen = ++speakGen
     var left = Math.max(1, S.repeat)
-    var rate = clampN(parseFloat($('rate').value) || 0.85, 0.5, 1.2)
+    var rate = clampN(parseFloat($('rate').value) || 0.7, 0.4, 1.2)
+    var pitch = clampN(parseFloat($('pitch').value) || 1, 0.7, 1.3)
+    var pauseMs = clampN(parseFloat($('pauseMs').value) || 1000, 300, 3000)
     function once() {
       if (gen !== speakGen) return
       var u = new SpeechSynthesisUtterance(word)
       u.lang = 'zh-CN'
       if (zhVoice) u.voice = zhVoice
       u.rate = rate
+      u.pitch = pitch
       u.onend = function () {
         if (gen !== speakGen) return
         left--
-        if (left > 0 && state.phase === 'live' && !state.paused) setTimeout(once, 600)
+        if (left > 0 && state.phase === 'live' && !state.paused) setTimeout(once, pauseMs)
         else if (onEnd) onEnd()
       }
       speechSynthesis.speak(u)
@@ -337,10 +379,13 @@
       updateIdleSub()
     })
   })
-  ;['gapSec', 'rate'].forEach(function (id) {
+  ;['gapSec', 'rate', 'pauseMs', 'pitch'].forEach(function (id) {
     $(id).addEventListener('input', function () {
       var v = parseFloat(this.value)
-      if (id === 'gapSec') { $('gapVal').textContent = v + ' 秒' } else { $('rateVal').textContent = v + 'x' }
+      if (id === 'gapSec') $('gapVal').textContent = v + ' 秒'
+      if (id === 'rate') $('rateVal').textContent = v + 'x'
+      if (id === 'pauseMs') $('pauseVal').textContent = (v / 1000).toFixed(1) + ' 秒'
+      if (id === 'pitch') $('pitchVal').textContent = v.toFixed(2).replace(/0$/, '')
       updateIdleSub()
     })
   })
