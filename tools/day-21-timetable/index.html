@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>课程表生成器 · 文字排课表，冲突自动检查</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --green: #58B586; --green-d: #3e9c6c; --ink: #1f2d26; --ink-2: #5b6a62; --ink-3: #93a09a;
+    --line: #e3e9e5; --bg: #f0f3f1; --panel: #fff; --red: #c96a4a;
+  }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: var(--bg); color: var(--ink); min-height: 100vh; font-size: 14px;
+    -webkit-font-smoothing: antialiased;
+  }
+  .topbar {
+    position: sticky; top: 0; z-index: 50; background: rgba(255,255,255,.92); backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--line); padding: 10px 18px; display: flex; align-items: center; gap: 14px;
+  }
+  .brand .logo { font-weight: 700; font-size: 16px; }
+  .brand .logo em { font-style: normal; color: var(--green); }
+  .brand .tag { font-size: 12px; color: var(--ink-3); }
+  .brand { display: flex; align-items: baseline; gap: 10px; }
+  .spacer { flex: 1; }
+  .btn { appearance: none; border: none; cursor: pointer; font-family: inherit; border-radius: 8px; padding: 8px 18px; font-size: 14px; transition: all .15s; }
+  .btn-primary { background: var(--green); color: #fff; font-weight: 600; box-shadow: 0 2px 8px rgba(88,181,134,.35); }
+  .btn-primary:hover { background: var(--green-d); }
+  .btn-ghost { background: transparent; color: var(--ink-2); border: 1px solid var(--line); }
+  .btn-ghost:hover { border-color: var(--ink-3); color: var(--ink); }
+  .layout { display: grid; grid-template-columns: 360px 1fr; min-height: calc(100vh - 53px); }
+  @media (max-width: 900px) { .layout { grid-template-columns: 1fr; } .side { position: static; max-height: none; border-right: none; } }
+  .side {
+    border-right: 1px solid var(--line); background: var(--panel); padding: 18px 16px 24px;
+    position: sticky; top: 53px; max-height: calc(100vh - 53px); overflow-y: auto;
+  }
+  .side h3.sec { font-size: 11.5px; font-weight: 600; color: var(--ink-3); letter-spacing: 1.5px; margin: 20px 0 10px; display: flex; align-items: center; gap: 8px; }
+  .side h3.sec:first-child { margin-top: 2px; }
+  .side h3.sec::after { content: ''; flex: 1; height: 1px; background: var(--line); }
+  textarea {
+    width: 100%; min-height: 200px; font-family: "PingFang SC", monospace; font-size: 13.5px; line-height: 1.9; padding: 10px 12px;
+    border: 1px solid var(--line); border-radius: 8px; outline: none; background: #fbfdfb; resize: vertical;
+  }
+  textarea:focus { border-color: var(--green); box-shadow: 0 0 0 3px rgba(88,181,134,.15); }
+  .slider-row { display: flex; align-items: center; gap: 10px; margin: 0 0 12px; }
+  .slider-row .lab { color: var(--ink-2); font-size: 13.5px; width: 64px; flex-shrink: 0; }
+  input[type=range] { -webkit-appearance: none; flex: 1; height: 4px; border-radius: 2px; background: #e0e7e2; outline: none; }
+  input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%; background: #fff; border: 2px solid var(--green); box-shadow: 0 1px 4px rgba(31,45,38,.18); cursor: pointer; }
+  .slider-row .val { font-variant-numeric: tabular-nums; font-size: 13px; width: 52px; text-align: right; }
+  .toggle { position: relative; display: inline-block; width: 38px; height: 22px; flex-shrink: 0; }
+  .toggle input { opacity: 0; width: 0; height: 0; }
+  .toggle i { position: absolute; inset: 0; background: #d4dcd7; border-radius: 22px; transition: .18s; cursor: pointer; }
+  .toggle i::before { content: ''; position: absolute; width: 16px; height: 16px; border-radius: 50%; background: #fff; left: 3px; top: 3px; transition: .18s; box-shadow: 0 1px 3px rgba(0,0,0,.2); }
+  .toggle input:checked + i { background: var(--green); }
+  .toggle input:checked + i::before { transform: translateX(16px); }
+  .field { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 0 0 12px; }
+  .field .lab { color: var(--ink-2); font-size: 13.5px; flex-shrink: 0; }
+  .hint { font-size: 12px; color: var(--ink-3); line-height: 1.7; margin-top: 10px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { appearance: none; border: 1px solid var(--line); background: #fff; border-radius: 14px; padding: 4px 12px; font-size: 12.5px; color: var(--ink-2); cursor: pointer; }
+  .chip:hover { border-color: var(--green); color: var(--green-d); }
+  .conflict-box { display: none; margin-top: 12px; border: 1px solid #f2d9cc; background: #fdf3ef; border-radius: 8px; padding: 10px 12px; }
+  .conflict-box.show { display: block; }
+  .conflict-box b { color: var(--red); }
+  .conflict-box ul { margin: 6px 0 0 18px; font-size: 12.5px; color: #8c3018; line-height: 1.8; }
+
+  .stage { padding: 28px 20px 60px; overflow: auto; }
+  .zoombar { display: flex; justify-content: center; gap: 6px; margin-bottom: 16px; }
+  .zoombar button { appearance: none; border: 1px solid var(--line); background: #fff; border-radius: 7px; padding: 4px 12px; font-size: 12.5px; color: var(--ink-2); cursor: pointer; }
+  .zoombar button.on { border-color: var(--green); color: var(--green-d); font-weight: 600; }
+  .zoomwrap { display: flex; justify-content: center; }
+  .zoominner { transform-origin: top center; }
+
+  .paper {
+    width: 297mm; min-height: 210mm; background: #fff; margin: 0 auto 18px;
+    box-shadow: 0 1px 3px rgba(31,45,38,.12), 0 12px 40px rgba(31,45,38,.14); border-radius: 3px;
+    padding: 12mm; display: flex; flex-direction: column;
+  }
+  .paper h1 { text-align: center; font-size: 7mm; margin-bottom: 2mm; letter-spacing: 1mm; }
+  .paper .subtitle { text-align: center; font-size: 3.2mm; color: #7c8a82; margin-bottom: 6mm; }
+  table.tt { width: 100%; border-collapse: collapse; table-layout: fixed; flex: 1; }
+  table.tt th, table.tt td {
+    border: 0.35mm solid #7e8f88; text-align: center; vertical-align: middle;
+    font-size: 3.6mm; padding: 1.5mm 1mm; word-break: break-all;
+  }
+  table.tt th { background: #edf4f0; font-weight: 600; }
+  table.tt td.void { background: #f7faf8; }
+  table.tt td .cls { font-weight: 600; display: block; }
+  table.tt td .meta { font-size: 2.8mm; color: #5b6a62; display: block; margin-top: 1mm; }
+  table.tt td .alt { font-size: 2.6mm; color: #8c3018; display: block; margin-top: 0.6mm; }
+  .foot { text-align: center; color: #a9b4ae; font-size: 12px; padding: 26px 0 30px; }
+  @media print {
+    body { background: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .no-print { display: none !important; }
+    .layout { display: block; }
+    .stage { padding: 0; overflow: visible; }
+    .zoominner { transform: none !important; }
+    .paper { box-shadow: none; margin: 0; border-radius: 0; page-break-after: always; break-after: page; }
+    .paper:last-of-type { page-break-after: auto; break-after: auto; }
+    @page { size: A4 landscape; margin: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="topbar no-print">
+  <div class="brand">
+    <div class="logo">AI帮我做<em> · </em>课程表生成器</div>
+    <div class="tag">文字排课 · 冲突自动检查</div>
+  </div>
+  <div class="spacer"></div>
+  <button class="btn btn-ghost" id="zoomFitBtn">适应屏幕</button>
+  <button class="btn btn-primary" id="printBtn">打印 / 存 PDF</button>
+</div>
+
+<div class="layout">
+  <aside class="side no-print">
+    <h3 class="sec">课表文字（每行一节课）</h3>
+    <textarea id="src" spellcheck="false">周一 1 语文
+周一 2 数学
+周一 3 英语
+周二 1 数学
+周二 2 语文
+周二 4 体育
+周三 2 英语
+周三 3 美术
+周四 1 语文
+周四 3 音乐
+周五 2 数学
+周五 4 科学</textarea>
+    <div class="chips" style="margin-top:10px">
+      <button class="chip" id="sampleBtn">示例课表</button>
+      <button class="chip" id="conflictBtn">塞一个冲突</button>
+    </div>
+    <div class="hint">格式：星期 节次 课程名 [教室] [老师]；节次支持 <b>3-4</b>（连堂）和 <b>6单</b>/<b>6双</b>（单双周）；星期可用 周一/星期一/礼拜一</div>
+
+    <h3 class="sec">表头</h3>
+    <div class="field"><span class="lab">班级标题</span><input id="clsTitle" type="text" value="三年级 2 班" style="flex:1;font-size:13.5px;padding:7px 10px;border:1px solid var(--line);border-radius:8px;outline:none"></div>
+    <div class="field"><span class="lab">每天节数</span><div class="stepper"><button data-step="periods,-1">−</button><span class="n" id="periodsVal">6</span><button data-step="periods,1">＋</button></div></div>
+    <div class="field"><span class="lab">下午从第几节起标「午」</span><div class="stepper"><button data-step="pmFrom,-1">−</button><span class="n" id="pmVal">4</span><button data-step="pmFrom,1">＋</button></div></div>
+
+    <h3 class="sec">冲突检查</h3>
+    <div class="conflict-box" id="conflictBox"></div>
+    <div class="hint">同一班同一时段排了两门课会红框报错；单双周同格不算冲突（互为替代）。</div>
+  </aside>
+
+  <main class="stage">
+    <div class="zoombar no-print">
+      <button data-z="fit" class="on">适应屏幕</button>
+      <button data-z="100">100%</button>
+      <button data-z="75">75%</button>
+    </div>
+    <div class="zoomwrap"><div class="zoominner" id="zoominner"><div id="papers"></div></div></div>
+    <div class="foot">本地生成 · 无网络请求 · AI帮我做 · Day 21</div>
+  </main>
+</div>
+
+<script>
+(function () {
+  var S = { periods: 6, pmFrom: 4 }
+  var DAYS = ['周一', '周二', '周三', '周四', '周五']
+  var DAY_ALIAS = { '周一': 0, '周二': 1, '周三': 2, '周四': 3, '周五': 4, '星期一': 0, '星期二': 1, '星期三': 2, '星期四': 3, '星期五': 4, '礼拜一': 0, '礼拜二': 1, '礼拜三': 2, '礼拜四': 3, '礼拜五': 4 }
+  function $(id) { return document.getElementById(id) }
+  function clampN(v, lo, hi) { return Math.max(lo, Math.min(hi, v)) }
+
+  // 第一版：朴素解析——split 空格取段
+  function parseLine(line) {
+    var parts = line.trim().split(/\s+/)
+    if (!parts.length) return null
+    var day = DAY_ALIAS[parts[0]]
+    if (day === undefined) return { error: '看不懂星期「' + parts[0] + '」' }
+    var period = parts[1]
+    var m = /^(\d+)(-([1-9]))?(单|双)?$/.exec(period || '')
+    if (!m) return { error: '看不懂节次「' + period + '」' }
+    var p1 = parseInt(m[1], 10), p2 = m[3] ? parseInt(m[3], 10) : p1
+    var parity = m[4] || ''
+    var cls = parts[2] || ''
+    if (!cls) return { error: '缺课程名' }
+    var room = parts[3] || '', teacher = parts[4] || ''
+    return { day: day, p1: p1, p2: p2, parity: parity, cls: cls, room: room, teacher: teacher, raw: line }
+  }
+
+  // 第一版冲突检测：同格已有课且非单双周互补 → 冲突
+  function build() {
+    var lines = $('src').value.split('\n')
+    var grid = {}, entries = [], errors = [], conflicts = []
+    lines.forEach(function (line, ln) {
+      if (!line.trim()) return
+      var e = parseLine(line)
+      if (e.error) { errors.push('第 ' + (ln + 1) + ' 行：' + e.error); return }
+      if (e.p1 > e.p2) { var t = e.p1; e.p1 = e.p2; e.p2 = t }
+      if (e.p2 > S.periods) e.p2 = S.periods
+      e.ln = ln + 1
+      entries.push(e)
+      for (var p = e.p1; p <= e.p2; p++) {
+        var key = e.day + '-' + p
+        if (!grid[key]) { grid[key] = []; grid[key].parity = {} }
+        // 单双周互补判定：已有 1 条且双方都带单/双且不同
+        var prev = grid[key][grid[key].length - 1]
+        if (prev && ((prev.parity === '单' && e.parity === '双') || (prev.parity === '双' && e.parity === '单'))) {
+          grid[key].parity.ok = true
+        } else if (grid[key].length) {
+          conflicts.push({ day: e.day, period: p, a: prev, b: e })
+        }
+        grid[key].push(e)
+        e._cells = (e._cells || 0) + 1
+      }
+    })
+    render(grid, entries, errors, conflicts)
+    window.__state = { grid: grid, entries: entries, errors: errors, conflicts: conflicts }
+  }
+
+  function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') }
+
+  function render(grid, entries, errors, conflicts) {
+    var cbox = $('conflictBox')
+    if (errors.length || conflicts.length) {
+      cbox.className = 'conflict-box show'
+      var lis = errors.map(function (e) { return '<li>' + esc(e) + '</li>' }).join('')
+      lis += conflicts.map(function (c) {
+        return '<li>' + DAYS[c.day] + '第 ' + c.period + ' 节：「' + esc(c.a.cls) + '」（第' + c.a.ln + '行）与「' + esc(c.b.cls) + '」（第' + c.b.ln + '行）撞在同一格' + '</li>'
+      }).join('')
+      cbox.innerHTML = '<b>发现 ' + (errors.length + conflicts.length) + ' 个问题：</b><ul>' + lis + '</ul>'
+    } else {
+      cbox.className = 'conflict-box'
+    }
+    var pm = S.pmFrom
+    var html = '<div class="paper"><h1>' + esc($('clsTitle').value || '课程表') + '</h1>' +
+      '<div class="subtitle">' + new Date().toLocaleDateString('zh-CN') + ' · 共 ' + entries.length + ' 节</div><table class="tt"><tr><th style="width:9mm">节</th>'
+    DAYS.forEach(function (d) { html += '<th>' + d + '</th>' })
+    html += '</tr>'
+    for (var p = 1; p <= S.periods; p++) {
+      html += '<tr><th>' + p + (p >= pm ? '<br><span style="font-size:2.6mm;color:#93a09a">午</span>' : '') + '</th>'
+      for (var d = 0; d < 5; d++) {
+        var cell = grid[d + '-' + p]
+        if (!cell) { html += '<td class="void"></td>'; continue }
+        var e = cell[cell.length - 1]
+        var meta = [e.room, e.teacher].filter(Boolean).join(' · ')
+        html += '<td><span class="cls">' + esc(e.cls) + '</span>' +
+          (meta ? '<span class="meta">' + esc(meta) + '</span>' : '') +
+          (e.parity ? '<span class="alt">' + e.parity + '周</span>' : '') + '</td>'
+      }
+      html += '</tr>'
+    }
+    html += '</table></div>'
+    $('papers').innerHTML = html
+  }
+
+  // 绑定
+  $('src').addEventListener('input', build)
+  $('clsTitle').addEventListener('input', build)
+  document.querySelectorAll('.stepper button').forEach(function (b) {
+    b.addEventListener('click', function () {
+      var p = b.dataset.step.split(',')
+      S[p[0]] = clampN(S[p[0]] + parseInt(p[1], 10), p[0] === 'periods' ? 4 : 1, p[0] === 'periods' ? 10 : 8)
+      $(p[0] + 'Val').textContent = S[p[0]]
+      build()
+    })
+  })
+  $('sampleBtn').addEventListener('click', function () {
+    $('src').value = '周一 1 语文\n周一 2 数学\n周一 3 英语\n周一 4 体育\n周二 1 数学\n周二 2 语文\n周二 3 科学\n周三 2 英语\n周三 3 美术 教室302\n周三 5-6 体育 操场\n周四 1 语文\n周四 3 音乐\n周四 6单 劳动\n周四 6双 书法\n周五 2 数学\n周五 4 科学'
+    build()
+  })
+  $('conflictBtn').addEventListener('click', function () {
+    $('src').value = ($('src').value + '\n周一 1 数学').trim()
+    build()
+  })
+  $('printBtn').addEventListener('click', function () { window.print() })
+  function applyZoom(z) {
+    var inner = $('zoominner')
+    if (z === 'fit') {
+      var stage = document.querySelector('.stage')
+      inner.style.transform = 'scale(' + Math.min(1, (stage.clientWidth - 40) / (297 * window.__MM)) + ')'
+    } else inner.style.transform = 'scale(' + (parseInt(z, 10) / 100) + ')'
+  }
+  document.querySelectorAll('.zoombar button').forEach(function (b) {
+    b.addEventListener('click', function () {
+      document.querySelectorAll('.zoombar button').forEach(function (x) { x.classList.remove('on') })
+      b.classList.add('on'); applyZoom(b.dataset.z)
+    })
+  })
+  $('zoomFitBtn').addEventListener('click', function () {
+    document.querySelectorAll('.zoombar button').forEach(function (x) { x.classList.toggle('on', x.dataset.z === 'fit') })
+    applyZoom('fit')
+  })
+  window.__MM = 96 / 25.4
+  window.__parseLine = parseLine
+  build()
+  applyZoom('fit')
+  window.addEventListener('resize', function () {
+    var on = document.querySelector('.zoombar button.on')
+    if (on && on.dataset.z === 'fit') applyZoom('fit')
+  })
+})();
+</script>
+</body>
+</html>

@@ -23,6 +23,7 @@
 | Day 18 | 古诗默写卷生成器 | 79 首小学必背、搜索选诗、三档难度锚点保护、答案页可打印 | [`tools/day-18-poem-dictation/`](tools/day-18-poem-dictation/) |
 | Day 19 | 字帖生成器 | 田字格描红、拼音四线三格教学占格、字母数字成对、A4 打印 | [`tools/day-19-copybook-generator/`](tools/day-19-copybook-generator/) |
 | Day 20 | 生字听写工具 | 自动语音报词、可调速与间隔、随机顺序、错词标记重听闭环 | [`tools/day-20-dictation/`](tools/day-20-dictation/) |
+| Day 21 | 课程表生成器 | 文字排课表、时段冲突自动检查、连堂与单双周、A4 横向打印 | [`tools/day-21-timetable/`](tools/day-21-timetable/) |
 
 ## 仓库结构
 
@@ -98,7 +99,10 @@
     ├── day-19-copybook-generator/
     │   ├── README.md
     │   └── index.html
-    └── day-20-dictation/
+    ├── day-20-dictation/
+    │   ├── README.md
+    │   └── index.html
+    └── day-21-timetable/
         ├── README.md
         └── index.html
 ```
